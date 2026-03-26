@@ -158,6 +158,35 @@ const masterController = {
     res.json({ success: true, data: store });
   },
 
+  listStoreDeals: async (req, res) => {
+    requireFields(req.query, ["store_id"]);
+
+    const store = await Store.findById(req.query.store_id);
+    if (!store) {
+      throw new HttpError(404, "Store not found");
+    }
+
+    const pagination = parsePagination(req.query);
+    const deals = await Deal.list({
+      ...pagination,
+      store_id: req.query.store_id,
+      deal_category_id: req.query.deal_category_id,
+      status: req.query.status,
+      location: req.query.location,
+      min_discount_rate: req.query.min_discount_rate,
+      search: req.query.search
+    });
+
+    res.json({
+      success: true,
+      data: {
+        store,
+        deals
+      },
+      meta: pagination
+    });
+  },
+
   createDeal: async (req, res) => {
     requireFields(req.body, ["title", "store_id", "original_price", "discount_price"]);
 

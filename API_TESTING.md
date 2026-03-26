@@ -125,6 +125,7 @@ For admin testing:
 | `create_store` | Yes | Vendor/Admin | Vendor creates own store |
 | `list_stores` | No | Any | Supports filters |
 | `get_store` | No | Any | Requires `id` |
+| `list_store_deals` | No | Any | Requires `store_id` |
 | `create_deal` | Yes | Vendor/Admin | Vendor can use own store only |
 | `list_deals` | No | Any | Supports filters |
 | `get_deal` | No | Any | Requires `id` |
@@ -345,6 +346,25 @@ Body:
 Save:
 
 - `data.id` as `deal_id`
+
+### 10B. List Deals For One Store
+
+Headers:
+
+```http
+request: list_store_deals
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "store_id": {{store_id}},
+  "page": 1,
+  "limit": 10
+}
+```
 
 ### 11. List Deals
 

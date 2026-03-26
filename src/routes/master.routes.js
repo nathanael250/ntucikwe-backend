@@ -62,6 +62,9 @@ const commandMap = {
     idSource: "id",
     handler: masterController.getStore
   },
+  [commands.LIST_STORE_DEALS]: {
+    handler: masterController.listStoreDeals
+  },
   [commands.CREATE_DEAL]: {
     authRequired: true,
     permission: commands.CREATE_DEAL,
