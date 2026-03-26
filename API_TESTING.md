@@ -353,23 +353,20 @@ Authorization: Bearer {{vendor_token}}
 
 Body:
 
-```json
-{
-  "title": "Samsung TV Discount",
-  "store_id": {{store_id}},
-  "original_price": 1000,
-  "discount_price": 750,
-  "description": "Black Friday TV offer",
-  "deal_category_id": 1,
-  "start_date": "2026-03-24 08:00:00",
-  "end_date": "2026-03-30 23:59:59",
-  "status": "active",
-  "images": [
-    "/uploads/deals/samsung-tv-front.jpg",
-    "/uploads/deals/samsung-tv-side.jpg"
-  ]
-}
-```
+Use `form-data` when uploading real files.
+
+Fields:
+
+- `title` = `Samsung TV Discount`
+- `store_id` = `{{store_id}}`
+- `original_price` = `1000`
+- `discount_price` = `750`
+- `description` = `Black Friday TV offer`
+- `deal_category_id` = `1`
+- `start_date` = `2026-03-24 08:00:00`
+- `end_date` = `2026-03-30 23:59:59`
+- `status` = `active`
+- `images` = select one or many image files
 
 Save:
 
@@ -381,6 +378,23 @@ The backend now inserts into both:
 - `deal_images`
 
 in the same request.
+
+Example `curl`:
+
+```bash
+curl -X POST http://localhost:5000/api \
+  -H "request: create_deal" \
+  -H "Authorization: Bearer <vendor_token>" \
+  -F "title=Samsung TV Discount" \
+  -F "store_id=1" \
+  -F "original_price=1000" \
+  -F "discount_price=750" \
+  -F "description=Black Friday TV offer" \
+  -F "deal_category_id=1" \
+  -F "status=active" \
+  -F "images=@/absolute/path/to/front.jpg" \
+  -F "images=@/absolute/path/to/side.jpg"
+```
 
 ### 10B. List Deals For One Store
 

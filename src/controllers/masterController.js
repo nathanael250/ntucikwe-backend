@@ -29,6 +29,27 @@ const buildAuthResponse = (user) => ({
   token: signToken({ userId: user.id, role: user.role })
 });
 
+const parseJsonArrayField = (value) => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_error) {
+    return [value];
+  }
+};
+
 const masterController = {
   commands,
 
@@ -291,7 +312,15 @@ const masterController = {
       await Store.assertVendorOwnership(req.body.store_id, req.user.id);
     }
 
-    const deal = await Deal.create(req.body);
+    const uploadedImages = (req.files || []).map(
+      (file) => `/uploads/deals/${file.filename}`
+    );
+    const existingImages = parseJsonArrayField(req.body.images);
+
+    const deal = await Deal.create({
+      ...req.body,
+      images: [...existingImages, ...uploadedImages]
+    });
 
     res.status(201).json({
       success: true,
@@ -325,8 +354,6 @@ const masterController = {
   },
 
   addDealImage: async (req, res) => {
-    requireFields(req.body, ["image_path"]);
-
     if (req.user.role === "vendor") {
       const deal = await Deal.findById(req.params.id);
       if (!deal) {
@@ -336,9 +363,13 @@ const masterController = {
       await Store.assertVendorOwnership(deal.store_id, req.user.id);
     }
 
+    const uploadedImagePath = req.file ? `/uploads/deals/${req.file.filename}` : null;
+    const imagePath = uploadedImagePath || req.body.image_path;
+    requireFields({ image_path: imagePath }, ["image_path"]);
+
     const image = await Deal.addImage({
       deal_id: req.params.id,
-      image_path: req.body.image_path
+      image_path: imagePath
     });
 
     res.status(201).json({ success: true, data: image });

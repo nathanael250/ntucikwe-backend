@@ -2,6 +2,7 @@ const express = require("express");
 const masterController = require("../controllers/masterController");
 const auth = require("../middleware/auth");
 const authorize = require("../middleware/authorize");
+const upload = require("../middleware/upload");
 const commands = require("../config/commands");
 const { asyncHandler } = require("../utils/controllerHelpers");
 const HttpError = require("../utils/httpError");
@@ -151,6 +152,11 @@ const getCommandFromHeaders = (req) => {
   return req.headers.request || req.headers["x-command"] || req.headers.command;
 };
 
+const uploadMap = {
+  [commands.CREATE_DEAL]: upload.array("images", 10),
+  [commands.ADD_DEAL_IMAGE]: upload.single("image")
+};
+
 const prepareRequest = (req, definition) => {
   const payload = req.body && typeof req.body === "object" ? req.body : {};
   req.query = { ...req.query, ...payload };
@@ -183,12 +189,16 @@ router.all(
       throw new HttpError(404, `Unsupported command: ${command}`);
     }
 
-    prepareRequest(req, definition);
-
     if (definition.authRequired) {
       await runMiddleware(auth, req, res);
       await runMiddleware(authorize(definition.permission), req, res);
     }
+
+    if (uploadMap[command]) {
+      await runMiddleware(uploadMap[command], req, res);
+    }
+
+    prepareRequest(req, definition);
 
     await definition.handler(req, res);
   })
