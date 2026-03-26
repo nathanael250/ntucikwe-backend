@@ -149,6 +149,33 @@ const masterController = {
     res.json({ success: true, data: stores, meta: pagination });
   },
 
+  listUserStores: async (req, res) => {
+    requireFields(req.query, ["user_id"]);
+
+    const user = await User.getSafeUserById(req.query.user_id);
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
+    const pagination = parsePagination(req.query);
+    const stores = await Store.list({
+      ...pagination,
+      vendor_id: req.query.user_id,
+      store_category_id: req.query.store_category_id,
+      location: req.query.location,
+      search: req.query.search
+    });
+
+    res.json({
+      success: true,
+      data: {
+        user,
+        stores
+      },
+      meta: pagination
+    });
+  },
+
   getStore: async (req, res) => {
     const store = await Store.findById(req.params.id);
     if (!store) {

@@ -9,6 +9,7 @@ const rolePermissions = {
     commands.CREATE_DEAL_CATEGORY,
     commands.CREATE_STORE,
     commands.LIST_STORES,
+    commands.LIST_USER_STORES,
     commands.GET_STORE,
     commands.LIST_STORE_DEALS,
     commands.CREATE_DEAL,
@@ -27,6 +28,7 @@ const rolePermissions = {
     commands.GET_PROFILE,
     commands.CREATE_STORE,
     commands.LIST_STORES,
+    commands.LIST_USER_STORES,
     commands.GET_STORE,
     commands.LIST_STORE_DEALS,
     commands.CREATE_DEAL,
@@ -42,6 +44,7 @@ const rolePermissions = {
   public_user: [
     commands.GET_PROFILE,
     commands.LIST_STORES,
+    commands.LIST_USER_STORES,
     commands.GET_STORE,
     commands.LIST_STORE_DEALS,
     commands.LIST_DEALS,

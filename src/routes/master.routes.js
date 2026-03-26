@@ -58,6 +58,9 @@ const commandMap = {
   [commands.LIST_STORES]: {
     handler: masterController.listStores
   },
+  [commands.LIST_USER_STORES]: {
+    handler: masterController.listUserStores
+  },
   [commands.GET_STORE]: {
     idSource: "id",
     handler: masterController.getStore

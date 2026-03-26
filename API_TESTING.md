@@ -124,6 +124,7 @@ For admin testing:
 | `list_deal_categories` | No | Any | List deal categories |
 | `create_store` | Yes | Vendor/Admin | Vendor creates own store |
 | `list_stores` | No | Any | Supports filters |
+| `list_user_stores` | No | Any | Requires `user_id` |
 | `get_store` | No | Any | Requires `id` |
 | `list_store_deals` | No | Any | Requires `store_id` |
 | `create_deal` | Yes | Vendor/Admin | Vendor can use own store only |
@@ -314,6 +315,25 @@ Body:
 ```json
 {
   "id": {{store_id}}
+}
+```
+
+### 9B. List Stores For One User
+
+Headers:
+
+```http
+request: list_user_stores
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "user_id": {{user_id}},
+  "page": 1,
+  "limit": 10
 }
 ```
 
