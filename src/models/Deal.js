@@ -1,4 +1,4 @@
-const { query } = require("../config/database");
+const { pool, query } = require("../config/database");
 const HttpError = require("../utils/httpError");
 
 class Deal {
@@ -27,27 +27,99 @@ class Deal {
       payload.original_price,
       payload.discount_price
     );
+    const imagePaths = this.normalizeImagePaths(payload.image_paths || payload.images);
+    const connection = await pool.getConnection();
 
-    const result = await query(
-      `INSERT INTO deals
-        (title, store_id, original_price, discount_price, discount_rate, description,
-         deal_category_id, start_date, end_date, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        payload.title,
-        payload.store_id,
-        payload.original_price,
-        payload.discount_price,
-        discountRate,
-        payload.description || null,
-        payload.deal_category_id || null,
-        payload.start_date || null,
-        payload.end_date || null,
-        payload.status || "active"
-      ]
+    try {
+      await connection.beginTransaction();
+
+      const [result] = await connection.execute(
+        `INSERT INTO deals
+          (title, store_id, original_price, discount_price, discount_rate, description,
+           deal_category_id, start_date, end_date, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          payload.title,
+          payload.store_id,
+          payload.original_price,
+          payload.discount_price,
+          discountRate,
+          payload.description || null,
+          payload.deal_category_id || null,
+          payload.start_date || null,
+          payload.end_date || null,
+          payload.status || "active"
+        ]
+      );
+
+      for (const imagePath of imagePaths) {
+        await connection.execute(
+          "INSERT INTO deal_images (deal_id, image_path) VALUES (?, ?)",
+          [result.insertId, imagePath]
+        );
+      }
+
+      await connection.commit();
+      return this.findById(result.insertId);
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  static normalizeImagePaths(images) {
+    if (!images) {
+      return [];
+    }
+
+    if (!Array.isArray(images)) {
+      throw new HttpError(400, "images must be an array");
+    }
+
+    return images.map((image) => {
+      const imagePath =
+        typeof image === "string"
+          ? image
+          : image && typeof image === "object"
+            ? image.image_path || image.path || image.url
+            : null;
+
+      if (!imagePath || typeof imagePath !== "string" || imagePath.trim() === "") {
+        throw new HttpError(400, "Each image must contain a valid path");
+      }
+
+      return imagePath.trim();
+    });
+  }
+
+  static async attachImages(deals) {
+    if (!deals || deals.length === 0) {
+      return deals;
+    }
+
+    const dealIds = deals.map((deal) => Number(deal.id));
+    const placeholders = dealIds.map(() => "?").join(", ");
+    const images = await query(
+      `SELECT id, deal_id, image_path, created_at
+       FROM deal_images
+       WHERE deal_id IN (${placeholders})
+       ORDER BY id ASC`,
+      dealIds
     );
 
-    return this.findById(result.insertId);
+    const imagesByDealId = images.reduce((accumulator, image) => {
+      const key = Number(image.deal_id);
+      accumulator[key] = accumulator[key] || [];
+      accumulator[key].push(image);
+      return accumulator;
+    }, {});
+
+    return deals.map((deal) => ({
+      ...deal,
+      images: imagesByDealId[Number(deal.id)] || []
+    }));
   }
 
   static async expireEndedDeals() {
@@ -68,10 +140,16 @@ class Deal {
        INNER JOIN stores s ON s.id = d.store_id
        LEFT JOIN deal_categories dc ON dc.id = d.deal_category_id
        WHERE d.id = ?
-       LIMIT 1`,
+      LIMIT 1`,
       [id]
     );
-    return rows[0] || null;
+
+    if (!rows[0]) {
+      return null;
+    }
+
+    const [deal] = await this.attachImages([rows[0]]);
+    return deal;
   }
 
   static async list(filters) {
@@ -114,7 +192,7 @@ class Deal {
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    return query(
+    const deals = await query(
       `SELECT d.*, s.store_name, s.location AS store_location,
               dc.category_name AS deal_category_name
        FROM deals d
@@ -125,6 +203,8 @@ class Deal {
        LIMIT ${safeLimit} OFFSET ${safeOffset}`,
       params
     );
+
+    return this.attachImages(deals);
   }
 
   static async addImage({ deal_id, image_path }) {

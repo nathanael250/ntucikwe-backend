@@ -3,6 +3,7 @@ const Ad = require("../models/Ad");
 const Deal = require("../models/Deal");
 const DealCategory = require("../models/DealCategory");
 const Notification = require("../models/Notification");
+const RedemptionRequest = require("../models/RedemptionRequest");
 const Store = require("../models/Store");
 const StoreCategory = require("../models/StoreCategory");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
@@ -211,6 +212,75 @@ const masterController = {
         deals
       },
       meta: pagination
+    });
+  },
+
+  createRedemptionQr: async (req, res) => {
+    requireFields(req.body, ["items"]);
+
+    const redemptionRequest = await RedemptionRequest.createFromSelection({
+      user_id: req.user.id,
+      items: req.body.items
+    });
+
+    await Notification.create({
+      user_id: req.user.id,
+      title: "Selection QR Created",
+      description: redemptionRequest.summary_message
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Selection summary and QR payload created successfully",
+      data: redemptionRequest
+    });
+  },
+
+  verifyRedemptionQr: async (req, res) => {
+    requireFields(req.body, ["qr_token"]);
+
+    const redemptionRequest = await RedemptionRequest.findByToken(req.body.qr_token);
+    if (!redemptionRequest) {
+      throw new HttpError(404, "QR code not found");
+    }
+
+    if (req.user.role === "vendor") {
+      await Store.assertVendorOwnership(redemptionRequest.store_id, req.user.id);
+    }
+
+    res.json({
+      success: true,
+      data: redemptionRequest
+    });
+  },
+
+  useRedemptionQr: async (req, res) => {
+    requireFields(req.body, ["qr_token"]);
+
+    const existing = await RedemptionRequest.findByToken(req.body.qr_token);
+    if (!existing) {
+      throw new HttpError(404, "QR code not found");
+    }
+
+    if (req.user.role === "vendor") {
+      await Store.assertVendorOwnership(existing.store_id, req.user.id);
+    }
+
+    const redemptionRequest = await RedemptionRequest.markAsUsed({
+      qr_token: req.body.qr_token,
+      used_by: req.user.id
+    });
+
+    await Notification.create({
+      user_id: redemptionRequest.user_id,
+      title: "QR Code Used",
+      description: `Your QR code for ${redemptionRequest.store_name} has been scanned and used.`
+    });
+
+    res.json({
+      success: true,
+      message: "QR code marked as used",
+      data: redemptionRequest
     });
   },
 

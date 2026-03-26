@@ -44,6 +44,7 @@ Authorization: Bearer <token>
 If you use Postman, create these variables:
 
 - `base_url` = `http://localhost:5000/api`
+- `user_token` = empty first
 - `vendor_token` = empty first
 - `admin_token` = empty first
 - `store_id` = empty first
@@ -127,6 +128,9 @@ For admin testing:
 | `list_user_stores` | No | Any | Requires `user_id` |
 | `get_store` | No | Any | Requires `id` |
 | `list_store_deals` | No | Any | Requires `store_id` |
+| `create_redemption_qr` | Yes | Logged-in user | Frontend sends selected items |
+| `verify_redemption_qr` | Yes | Admin/Vendor | Checks QR status before using |
+| `use_redemption_qr` | Yes | Admin/Vendor | Marks QR as used |
 | `create_deal` | Yes | Vendor/Admin | Vendor can use own store only |
 | `list_deals` | No | Any | Supports filters |
 | `get_deal` | No | Any | Requires `id` |
@@ -359,13 +363,24 @@ Body:
   "deal_category_id": 1,
   "start_date": "2026-03-24 08:00:00",
   "end_date": "2026-03-30 23:59:59",
-  "status": "active"
+  "status": "active",
+  "images": [
+    "/uploads/deals/samsung-tv-front.jpg",
+    "/uploads/deals/samsung-tv-side.jpg"
+  ]
 }
 ```
 
 Save:
 
 - `data.id` as `deal_id`
+
+The backend now inserts into both:
+
+- `deals`
+- `deal_images`
+
+in the same request.
 
 ### 10B. List Deals For One Store
 
@@ -383,6 +398,74 @@ Body:
   "store_id": {{store_id}},
   "page": 1,
   "limit": 10
+}
+```
+
+### 10C. Create Selection QR From Frontend Cart
+
+The cart stays in the frontend. When the user is ready, the frontend sends the selected deals here.
+
+Headers:
+
+```http
+request: create_redemption_qr
+Content-Type: application/json
+Authorization: Bearer {{user_token}}
+```
+
+Body:
+
+```json
+{
+  "items": [
+    {
+      "deal_id": {{deal_id}},
+      "quantity": 1
+    }
+  ]
+}
+```
+
+Response includes:
+
+- `summary_message`
+- `qr_token`
+- `qr_value`
+- selected `items`
+
+### 10D. Verify QR Before Use
+
+Headers:
+
+```http
+request: verify_redemption_qr
+Content-Type: application/json
+Authorization: Bearer {{admin_token}}
+```
+
+Body:
+
+```json
+{
+  "qr_token": "paste_qr_token_here"
+}
+```
+
+### 10E. Mark QR As Used
+
+Headers:
+
+```http
+request: use_redemption_qr
+Content-Type: application/json
+Authorization: Bearer {{admin_token}}
+```
+
+Body:
+
+```json
+{
+  "qr_token": "paste_qr_token_here"
 }
 ```
 

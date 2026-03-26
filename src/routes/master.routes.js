@@ -68,6 +68,21 @@ const commandMap = {
   [commands.LIST_STORE_DEALS]: {
     handler: masterController.listStoreDeals
   },
+  [commands.CREATE_REDEMPTION_QR]: {
+    authRequired: true,
+    permission: commands.CREATE_REDEMPTION_QR,
+    handler: masterController.createRedemptionQr
+  },
+  [commands.VERIFY_REDEMPTION_QR]: {
+    authRequired: true,
+    permission: commands.VERIFY_REDEMPTION_QR,
+    handler: masterController.verifyRedemptionQr
+  },
+  [commands.USE_REDEMPTION_QR]: {
+    authRequired: true,
+    permission: commands.USE_REDEMPTION_QR,
+    handler: masterController.useRedemptionQr
+  },
   [commands.CREATE_DEAL]: {
     authRequired: true,
     permission: commands.CREATE_DEAL,
