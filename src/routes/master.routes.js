@@ -153,8 +153,15 @@ const getCommandFromHeaders = (req) => {
 };
 
 const uploadMap = {
-  [commands.CREATE_DEAL]: upload.array("images", 10),
-  [commands.ADD_DEAL_IMAGE]: upload.single("image")
+  [commands.CREATE_DEAL]: upload.fields([
+    { name: "images", maxCount: 10 },
+    { name: "images[]", maxCount: 10 }
+  ]),
+  [commands.ADD_DEAL_IMAGE]: upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "images", maxCount: 1 },
+    { name: "images[]", maxCount: 1 }
+  ])
 };
 
 const prepareRequest = (req, definition) => {

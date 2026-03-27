@@ -50,6 +50,22 @@ const parseJsonArrayField = (value) => {
   }
 };
 
+const getUploadedFiles = (req) => {
+  if (Array.isArray(req.files)) {
+    return req.files;
+  }
+
+  if (req.files && typeof req.files === "object") {
+    return Object.values(req.files).flat();
+  }
+
+  if (req.file) {
+    return [req.file];
+  }
+
+  return [];
+};
+
 const masterController = {
   commands,
 
@@ -312,7 +328,7 @@ const masterController = {
       await Store.assertVendorOwnership(req.body.store_id, req.user.id);
     }
 
-    const uploadedImages = (req.files || []).map(
+    const uploadedImages = getUploadedFiles(req).map(
       (file) => `/uploads/deals/${file.filename}`
     );
     const existingImages = parseJsonArrayField(req.body.images);
@@ -363,7 +379,8 @@ const masterController = {
       await Store.assertVendorOwnership(deal.store_id, req.user.id);
     }
 
-    const uploadedImagePath = req.file ? `/uploads/deals/${req.file.filename}` : null;
+    const [uploadedFile] = getUploadedFiles(req);
+    const uploadedImagePath = uploadedFile ? `/uploads/deals/${uploadedFile.filename}` : null;
     const imagePath = uploadedImagePath || req.body.image_path;
     requireFields({ image_path: imagePath }, ["image_path"]);
 

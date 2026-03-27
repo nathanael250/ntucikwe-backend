@@ -1,9 +1,9 @@
 const express = require("express");
-const path = require("path");
 const cors = require("cors");
 const morgan = require("morgan");
 const dotenv = require("dotenv");
 const routes = require("./routes/master.routes");
+const { uploadsRoot } = require("./config/paths");
 const HttpError = require("./utils/httpError");
 
 dotenv.config();
@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use("/uploads", express.static(uploadsRoot));
 
 app.use("/api", routes);
 

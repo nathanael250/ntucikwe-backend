@@ -2,13 +2,13 @@ const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 const HttpError = require("../utils/httpError");
+const { dealsUploadsRoot } = require("../config/paths");
 
-const dealsUploadDir = path.join(process.cwd(), "uploads", "deals");
-fs.mkdirSync(dealsUploadDir, { recursive: true });
+fs.mkdirSync(dealsUploadsRoot, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    cb(null, dealsUploadDir);
+    cb(null, dealsUploadsRoot);
   },
   filename: (_req, file, cb) => {
     const extension = path.extname(file.originalname || "").toLowerCase();
