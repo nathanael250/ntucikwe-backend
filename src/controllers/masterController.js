@@ -398,8 +398,12 @@ const masterController = {
       requireFields(req.body, ["owner_id"]);
     }
 
+    const [uploadedBanner] = getUploadedFiles(req);
+    const bannerPath = uploadedBanner ? `/uploads/ads/${uploadedBanner.filename}` : null;
+
     const ad = await Ad.create({
       ...req.body,
+      banner: bannerPath || req.body.banner,
       owner_id: req.user.role === "admin" ? req.body.owner_id : req.user.id
     });
 

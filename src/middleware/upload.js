@@ -2,24 +2,10 @@ const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 const HttpError = require("../utils/httpError");
-const { dealsUploadsRoot } = require("../config/paths");
+const { dealsUploadsRoot, adsUploadsRoot } = require("../config/paths");
 
 fs.mkdirSync(dealsUploadsRoot, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, dealsUploadsRoot);
-  },
-  filename: (_req, file, cb) => {
-    const extension = path.extname(file.originalname || "").toLowerCase();
-    const safeBaseName = path
-      .basename(file.originalname || "image", extension)
-      .replace(/[^a-zA-Z0-9_-]/g, "-")
-      .toLowerCase();
-
-    cb(null, `${Date.now()}-${safeBaseName}${extension}`);
-  }
-});
+fs.mkdirSync(adsUploadsRoot, { recursive: true });
 
 const fileFilter = (_req, file, cb) => {
   if (!file.mimetype || !file.mimetype.startsWith("image/")) {
@@ -30,10 +16,29 @@ const fileFilter = (_req, file, cb) => {
   cb(null, true);
 };
 
-module.exports = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024
-  }
-});
+const createUploader = (destinationDir) =>
+  multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => {
+        cb(null, destinationDir);
+      },
+      filename: (_req, file, cb) => {
+        const extension = path.extname(file.originalname || "").toLowerCase();
+        const safeBaseName = path
+          .basename(file.originalname || "image", extension)
+          .replace(/[^a-zA-Z0-9_-]/g, "-")
+          .toLowerCase();
+
+        cb(null, `${Date.now()}-${safeBaseName}${extension}`);
+      }
+    }),
+    fileFilter,
+    limits: {
+      fileSize: 5 * 1024 * 1024
+    }
+  });
+
+module.exports = {
+  dealsUpload: createUploader(dealsUploadsRoot),
+  adsUpload: createUploader(adsUploadsRoot)
+};

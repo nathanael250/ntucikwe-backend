@@ -2,7 +2,7 @@ const express = require("express");
 const masterController = require("../controllers/masterController");
 const auth = require("../middleware/auth");
 const authorize = require("../middleware/authorize");
-const upload = require("../middleware/upload");
+const { dealsUpload, adsUpload } = require("../middleware/upload");
 const commands = require("../config/commands");
 const { asyncHandler } = require("../utils/controllerHelpers");
 const HttpError = require("../utils/httpError");
@@ -153,14 +153,18 @@ const getCommandFromHeaders = (req) => {
 };
 
 const uploadMap = {
-  [commands.CREATE_DEAL]: upload.fields([
+  [commands.CREATE_DEAL]: dealsUpload.fields([
     { name: "images", maxCount: 10 },
     { name: "images[]", maxCount: 10 }
   ]),
-  [commands.ADD_DEAL_IMAGE]: upload.fields([
+  [commands.ADD_DEAL_IMAGE]: dealsUpload.fields([
     { name: "image", maxCount: 1 },
     { name: "images", maxCount: 1 },
     { name: "images[]", maxCount: 1 }
+  ]),
+  [commands.CREATE_AD]: adsUpload.fields([
+    { name: "banner", maxCount: 1 },
+    { name: "image", maxCount: 1 }
   ])
 };
 

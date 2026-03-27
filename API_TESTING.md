@@ -552,15 +552,29 @@ Authorization: Bearer {{vendor_token}}
 
 Body:
 
-```json
-{
-  "title": "Homepage Banner Promotion",
-  "location": "Homepage Top",
-  "banner": "/uploads/ads/homepage-banner.jpg",
-  "status": "active",
-  "start_date": "2026-03-24 08:00:00",
-  "end_date": "2026-03-31 23:59:59"
-}
+Use `form-data` when uploading a real banner file.
+
+Fields:
+
+- `title` = `Homepage Banner Promotion`
+- `location` = `Homepage Top`
+- `banner` = select image file
+- `status` = `active`
+- `start_date` = `2026-03-24 08:00:00`
+- `end_date` = `2026-03-31 23:59:59`
+
+Example `curl`:
+
+```bash
+curl -X POST http://localhost:5000/api \
+  -H "request: create_ad" \
+  -H "Authorization: Bearer <vendor_token>" \
+  -F "title=Homepage Banner Promotion" \
+  -F "location=Homepage Top" \
+  -F "status=active" \
+  -F "start_date=2026-03-24 08:00:00" \
+  -F "end_date=2026-03-31 23:59:59" \
+  -F "banner=@/absolute/path/to/banner.jpg"
 ```
 
 ### 15. List Ads
