@@ -2,10 +2,11 @@ const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 const HttpError = require("../utils/httpError");
-const { dealsUploadsRoot, adsUploadsRoot } = require("../config/paths");
+const { dealsUploadsRoot, adsUploadsRoot, storesUploadsRoot } = require("../config/paths");
 
 fs.mkdirSync(dealsUploadsRoot, { recursive: true });
 fs.mkdirSync(adsUploadsRoot, { recursive: true });
+fs.mkdirSync(storesUploadsRoot, { recursive: true });
 
 const fileFilter = (_req, file, cb) => {
   if (!file.mimetype || !file.mimetype.startsWith("image/")) {
@@ -40,5 +41,6 @@ const createUploader = (destinationDir) =>
 
 module.exports = {
   dealsUpload: createUploader(dealsUploadsRoot),
-  adsUpload: createUploader(adsUploadsRoot)
+  adsUpload: createUploader(adsUploadsRoot),
+  storesUpload: createUploader(storesUploadsRoot)
 };

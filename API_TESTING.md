@@ -124,6 +124,7 @@ For admin testing:
 | `create_deal_category` | Yes | Admin | Create deal category |
 | `list_deal_categories` | No | Any | List deal categories |
 | `create_store` | Yes | Vendor/Admin | Vendor creates own store |
+| `update_store` | Yes | Vendor/Admin | Update store details, banner, profile image |
 | `list_stores` | No | Any | Supports filters |
 | `list_user_stores` | No | Any | Requires `user_id` |
 | `get_store` | No | Any | Requires `id` |
@@ -284,6 +285,40 @@ Body:
 Save:
 
 - `data.id` as `store_id`
+
+### 7B. Update Store
+
+Use `form-data` when updating the banner and profile image.
+
+Headers:
+
+```http
+request: update_store
+Authorization: Bearer {{vendor_token}}
+```
+
+Fields:
+
+- `id` = `{{store_id}}`
+- `store_name` = `Alice Supermarket Updated`
+- `description` = `Updated store description`
+- `location` = `Kigali`
+- `address` = `KG 10 Ave`
+- `banner` = select image file
+- `profile_image` = select image file
+
+Example `curl`:
+
+```bash
+curl -X POST http://localhost:5000/api \
+  -H "request: update_store" \
+  -H "Authorization: Bearer <vendor_token>" \
+  -F "id=1" \
+  -F "store_name=Alice Supermarket Updated" \
+  -F "description=Updated store description" \
+  -F "banner=@/absolute/path/to/banner.jpg" \
+  -F "profile_image=@/absolute/path/to/profile.jpg"
+```
 
 ### 8. List Stores
 

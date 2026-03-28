@@ -8,6 +8,7 @@ const rolePermissions = {
     commands.CREATE_STORE_CATEGORY,
     commands.CREATE_DEAL_CATEGORY,
     commands.CREATE_STORE,
+    commands.UPDATE_STORE,
     commands.LIST_STORES,
     commands.LIST_USER_STORES,
     commands.GET_STORE,
@@ -30,6 +31,7 @@ const rolePermissions = {
   vendor: [
     commands.GET_PROFILE,
     commands.CREATE_STORE,
+    commands.UPDATE_STORE,
     commands.LIST_STORES,
     commands.LIST_USER_STORES,
     commands.GET_STORE,

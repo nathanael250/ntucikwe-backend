@@ -10,6 +10,7 @@ module.exports = {
   CREATE_DEAL_CATEGORY: "create_deal_category",
   LIST_DEAL_CATEGORIES: "list_deal_categories",
   CREATE_STORE: "create_store",
+  UPDATE_STORE: "update_store",
   LIST_STORES: "list_stores",
   LIST_USER_STORES: "list_user_stores",
   GET_STORE: "get_store",

@@ -66,6 +66,21 @@ const getUploadedFiles = (req) => {
   return [];
 };
 
+const getUploadedFileByField = (req, fieldNames) => {
+  if (!req.files || typeof req.files !== "object" || Array.isArray(req.files)) {
+    return null;
+  }
+
+  for (const fieldName of fieldNames) {
+    const files = req.files[fieldName];
+    if (Array.isArray(files) && files[0]) {
+      return files[0];
+    }
+  }
+
+  return null;
+};
+
 const masterController = {
   commands,
 
@@ -162,14 +177,49 @@ const masterController = {
       requireFields(req.body, ["vendor_id"]);
     }
 
+    const bannerFile = getUploadedFileByField(req, ["banner"]);
+    const profileFile = getUploadedFileByField(req, ["profile_image", "profile"]);
+
     const store = await Store.create({
       ...req.body,
+      banner: bannerFile ? `/uploads/stores/${bannerFile.filename}` : req.body.banner,
+      profile_image: profileFile
+        ? `/uploads/stores/${profileFile.filename}`
+        : req.body.profile_image,
       vendor_id: req.user.role === "vendor" ? req.user.id : req.body.vendor_id
     });
 
     res.status(201).json({
       success: true,
       message: "Store created successfully",
+      data: store
+    });
+  },
+
+  updateStore: async (req, res) => {
+    const existingStore = await Store.findById(req.params.id);
+    if (!existingStore) {
+      throw new HttpError(404, "Store not found");
+    }
+
+    if (req.user.role === "vendor") {
+      await Store.assertVendorOwnership(req.params.id, req.user.id);
+    }
+
+    const bannerFile = getUploadedFileByField(req, ["banner"]);
+    const profileFile = getUploadedFileByField(req, ["profile_image", "profile"]);
+
+    const store = await Store.update(req.params.id, {
+      ...req.body,
+      banner: bannerFile ? `/uploads/stores/${bannerFile.filename}` : req.body.banner,
+      profile_image: profileFile
+        ? `/uploads/stores/${profileFile.filename}`
+        : req.body.profile_image
+    });
+
+    res.json({
+      success: true,
+      message: "Store updated successfully",
       data: store
     });
   },

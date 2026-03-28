@@ -32,13 +32,14 @@ class Store {
 
     const result = await query(
       `INSERT INTO stores
-        (vendor_id, store_name, description, banner, location, address, store_category_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        (vendor_id, store_name, description, banner, profile_image, location, address, store_category_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         payload.vendor_id,
         payload.store_name,
         payload.description || null,
         payload.banner || null,
+        payload.profile_image || null,
         payload.location || null,
         payload.address || null,
         payload.store_category_id || null
@@ -101,6 +102,41 @@ class Store {
        LIMIT ${safeLimit} OFFSET ${safeOffset}`,
       params
     );
+  }
+
+  static async update(id, payload) {
+    const existingStore = await this.findById(id);
+    if (!existingStore) {
+      throw new HttpError(404, "Store not found");
+    }
+
+    await query(
+      `UPDATE stores
+       SET store_name = ?,
+           description = ?,
+           banner = ?,
+           profile_image = ?,
+           location = ?,
+           address = ?,
+           store_category_id = ?
+       WHERE id = ?`,
+      [
+        payload.store_name || existingStore.store_name,
+        payload.description !== undefined ? payload.description : existingStore.description,
+        payload.banner !== undefined ? payload.banner : existingStore.banner,
+        payload.profile_image !== undefined
+          ? payload.profile_image
+          : existingStore.profile_image,
+        payload.location !== undefined ? payload.location : existingStore.location,
+        payload.address !== undefined ? payload.address : existingStore.address,
+        payload.store_category_id !== undefined
+          ? payload.store_category_id
+          : existingStore.store_category_id,
+        id
+      ]
+    );
+
+    return this.findById(id);
   }
 }
 

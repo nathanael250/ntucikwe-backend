@@ -41,6 +41,7 @@ CREATE TABLE stores (
     store_name VARCHAR(150) NOT NULL,
     description TEXT,
     banner VARCHAR(255),
+    profile_image VARCHAR(255),
     location VARCHAR(150),
     address TEXT,
     store_category_id BIGINT UNSIGNED,
