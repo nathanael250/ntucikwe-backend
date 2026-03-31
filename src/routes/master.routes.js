@@ -1,6 +1,7 @@
 const express = require("express");
 const masterController = require("../controllers/masterController");
 const auth = require("../middleware/auth");
+const authOptional = require("../middleware/authOptional");
 const authorize = require("../middleware/authorize");
 const { dealsUpload, adsUpload, storesUpload } = require("../middleware/upload");
 const commands = require("../config/commands");
@@ -76,9 +77,13 @@ const commandMap = {
     handler: masterController.listStoreDeals
   },
   [commands.CREATE_REDEMPTION_QR]: {
-    authRequired: true,
-    permission: commands.CREATE_REDEMPTION_QR,
+    optionalAuth: true,
     handler: masterController.createRedemptionQr
+  },
+  [commands.GET_ORDER_DETAILS]: {
+    authRequired: true,
+    permission: commands.GET_ORDER_DETAILS,
+    handler: masterController.getOrderDetails
   },
   [commands.VERIFY_REDEMPTION_QR]: {
     authRequired: true,
@@ -219,6 +224,8 @@ router.all(
     if (definition.authRequired) {
       await runMiddleware(auth, req, res);
       await runMiddleware(authorize(definition.permission), req, res);
+    } else if (definition.optionalAuth) {
+      await runMiddleware(authOptional, req, res);
     }
 
     if (uploadMap[command]) {

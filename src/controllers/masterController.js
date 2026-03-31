@@ -305,21 +305,52 @@ const masterController = {
   createRedemptionQr: async (req, res) => {
     requireFields(req.body, ["items"]);
 
-    const redemptionRequest = await RedemptionRequest.createFromSelection({
-      user_id: req.user.id,
-      items: req.body.items
+    if (!req.user) {
+      requireFields(req.body, ["customer_name", "phone_number", "email"]);
+    }
+
+    const order = await RedemptionRequest.createFromSelection({
+      user_id: req.user ? req.user.id : null,
+      customer_name: req.user
+        ? `${req.user.first_name} ${req.user.last_name}`.trim()
+        : req.body.customer_name,
+      phone_number: req.user ? req.user.phone_number : req.body.phone_number,
+      email: req.user ? req.user.email : req.body.email,
+      items: req.body.items,
+      expires_in_minutes: req.body.expires_in_minutes
     });
 
-    await Notification.create({
-      user_id: req.user.id,
-      title: "Selection QR Created",
-      description: redemptionRequest.summary_message
-    });
+    if (req.user) {
+      await Notification.create({
+        user_id: req.user.id,
+        title: "Order QR Codes Created",
+        description: order.summary_message
+      });
+    }
 
     res.status(201).json({
       success: true,
-      message: "Selection summary and QR payload created successfully",
-      data: redemptionRequest
+      message: req.user
+        ? "Order created successfully with store QR codes"
+        : "Guest order created successfully with store QR codes",
+      data: order
+    });
+  },
+
+  getOrderDetails: async (req, res) => {
+    const order = await RedemptionRequest.findOrderForActor({
+      order_id: req.body.order_id,
+      order_code: req.body.order_code,
+      actor: req.user
+    });
+
+    if (!order) {
+      throw new HttpError(404, "Order not found");
+    }
+
+    res.json({
+      success: true,
+      data: order
     });
   },
 
@@ -358,11 +389,13 @@ const masterController = {
       used_by: req.user.id
     });
 
-    await Notification.create({
-      user_id: redemptionRequest.user_id,
-      title: "QR Code Used",
-      description: `Your QR code for ${redemptionRequest.store_name} has been scanned and used.`
-    });
+    if (redemptionRequest.user_id) {
+      await Notification.create({
+        user_id: redemptionRequest.user_id,
+        title: "QR Code Used",
+        description: `Your QR code for ${redemptionRequest.store_name} has been scanned and used.`
+      });
+    }
 
     res.json({
       success: true,

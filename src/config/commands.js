@@ -16,6 +16,7 @@ module.exports = {
   GET_STORE: "get_store",
   LIST_STORE_DEALS: "list_store_deals",
   CREATE_REDEMPTION_QR: "create_redemption_qr",
+  GET_ORDER_DETAILS: "get_order_details",
   VERIFY_REDEMPTION_QR: "verify_redemption_qr",
   USE_REDEMPTION_QR: "use_redemption_qr",
   CREATE_DEAL: "create_deal",

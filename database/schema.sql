@@ -142,9 +142,59 @@ CREATE TABLE subscription_plans (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE orders (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id BIGINT UNSIGNED NULL,
+    customer_name VARCHAR(200) NULL,
+    phone_number VARCHAR(30) NULL,
+    email VARCHAR(150) NULL,
+    order_code VARCHAR(100) NOT NULL UNIQUE,
+    summary_message TEXT NOT NULL,
+    total_items INT NOT NULL DEFAULT 0,
+    total_original_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    total_discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    total_savings DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    expires_at DATETIME NOT NULL,
+    status ENUM('pending', 'partially_used', 'completed', 'expired', 'cancelled') NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_orders_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE order_items (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    order_id BIGINT UNSIGNED NOT NULL,
+    store_id BIGINT UNSIGNED NOT NULL,
+    deal_id BIGINT UNSIGNED NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    deal_title VARCHAR(200) NOT NULL,
+    original_price DECIMAL(12,2) NOT NULL,
+    discount_price DECIMAL(12,2) NOT NULL,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_order_items_order
+        FOREIGN KEY (order_id) REFERENCES orders(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_order_items_store
+        FOREIGN KEY (store_id) REFERENCES stores(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_order_items_deal
+        FOREIGN KEY (deal_id) REFERENCES deals(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
 CREATE TABLE redemption_requests (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    user_id BIGINT UNSIGNED NOT NULL,
+    order_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NULL,
     store_id BIGINT UNSIGNED NOT NULL,
     qr_token VARCHAR(100) NOT NULL UNIQUE,
     summary_message TEXT NOT NULL,
@@ -152,12 +202,18 @@ CREATE TABLE redemption_requests (
     total_original_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     total_discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     total_savings DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-    status ENUM('pending', 'used', 'cancelled') NOT NULL DEFAULT 'pending',
+    expires_at DATETIME NOT NULL,
+    status ENUM('pending', 'used', 'expired', 'cancelled') NOT NULL DEFAULT 'pending',
     used_at DATETIME NULL,
     used_by BIGINT UNSIGNED NULL,
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    UNIQUE KEY uq_redemption_requests_order_store (order_id, store_id),
+    CONSTRAINT fk_redemption_requests_order
+        FOREIGN KEY (order_id) REFERENCES orders(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
     CONSTRAINT fk_redemption_requests_user
         FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE

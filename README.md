@@ -62,7 +62,7 @@ npm run dev
 - Search and filtering for deals
 - Shared MySQL data access layer
 - Single fixed API endpoint using the `request` header instead of many changing route paths
-- Frontend-managed cart handoff to backend QR redemption flow
+- Frontend-managed cart handoff to backend multi-store order QR redemption flow
 
 ## API Pattern
 

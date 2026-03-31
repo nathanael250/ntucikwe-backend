@@ -129,9 +129,10 @@ For admin testing:
 | `list_user_stores` | No | Any | Requires `user_id` |
 | `get_store` | No | Any | Requires `id` |
 | `list_store_deals` | No | Any | Requires `store_id` |
-| `create_redemption_qr` | Yes | Logged-in user | Frontend sends selected items |
-| `verify_redemption_qr` | Yes | Admin/Vendor | Checks QR status before using |
-| `use_redemption_qr` | Yes | Admin/Vendor | Marks QR as used |
+| `create_redemption_qr` | Optional | Guest or logged-in user | Frontend sends selected items and gets one QR per store |
+| `get_order_details` | Yes | Logged-in user / seller / admin | Fetch an order by `order_id` or `order_code` |
+| `verify_redemption_qr` | Yes | Admin/Vendor | Seller checks QR status before accepting it |
+| `use_redemption_qr` | Yes | Admin/Vendor | Seller marks only that store QR as used |
 | `create_deal` | Yes | Vendor/Admin | Vendor can use own store only |
 | `list_deals` | No | Any | Supports filters |
 | `get_deal` | No | Any | Requires `id` |
@@ -450,7 +451,7 @@ Body:
 }
 ```
 
-### 10C. Create Selection QR From Frontend Cart
+### 10C. Create Order QR Codes From Frontend Cart
 
 The cart stays in the frontend. When the user is ready, the frontend sends the selected deals here.
 
@@ -459,6 +460,69 @@ Headers:
 ```http
 request: create_redemption_qr
 Content-Type: application/json
+```
+
+For logged-in user:
+
+```json
+{
+  "items": [
+    {
+      "deal_id": 1,
+      "quantity": 1
+    },
+    {
+      "deal_id": 2,
+      "quantity": 2
+    }
+  ],
+  "expires_in_minutes": 120
+}
+```
+
+For guest checkout without token:
+
+```json
+{
+  "customer_name": "John Doe",
+  "phone_number": "0780000000",
+  "email": "john@example.com",
+  "items": [
+    {
+      "deal_id": 1,
+      "quantity": 1
+    },
+    {
+      "deal_id": 2,
+      "quantity": 2
+    }
+  ],
+  "expires_in_minutes": 120
+}
+```
+
+Response includes:
+
+- `order_code`
+- order-level `summary_message`
+- all selected order `items`
+- `store_redemptions`
+- one `qr_token` and `qr_value` for each store
+- store-level `expires_at`, `is_used`, `is_expired`, `can_be_used`
+
+If you send `Authorization: Bearer {{user_token}}`, the order is linked to that user.
+
+If you do not send `Authorization`, then `customer_name`, `phone_number`, and `email` are required.
+
+### 10D. Verify QR Before Use
+
+### 10D. Get Order Details Later
+
+Headers:
+
+```http
+request: get_order_details
+Content-Type: application/json
 Authorization: Bearer {{user_token}}
 ```
 
@@ -466,23 +530,23 @@ Body:
 
 ```json
 {
-  "items": [
-    {
-      "deal_id": {{deal_id}},
-      "quantity": 1
-    }
-  ]
+  "order_code": "paste-order-code-here"
 }
 ```
 
-Response includes:
+You can also use:
 
-- `summary_message`
-- `qr_token`
-- `qr_value`
-- selected `items`
+```json
+{
+  "order_id": 1
+}
+```
 
-### 10D. Verify QR Before Use
+Customers see the full order.
+
+Vendors only see the parts of the order that belong to their own store.
+
+### 10E. Verify QR Before Use
 
 Headers:
 
@@ -500,7 +564,14 @@ Body:
 }
 ```
 
-### 10E. Mark QR As Used
+Verification response now tells the seller whether the QR:
+
+- has already been used
+- has expired
+- can still be used
+- and which store/order it belongs to
+
+### 10F. Mark QR As Used
 
 Headers:
 
