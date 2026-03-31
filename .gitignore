@@ -5,3 +5,11 @@ yarn-debug.log*
 yarn-error.log*
 coverage
 dist
+uploads/*
+!uploads/.gitkeep
+!uploads/ads/
+!uploads/ads/.gitkeep
+!uploads/deals/
+!uploads/deals/.gitkeep
+!uploads/stores/
+!uploads/stores/.gitkeep
