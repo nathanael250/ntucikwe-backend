@@ -518,11 +518,24 @@ Response includes:
 - all selected order `items`
 - `store_redemptions`
 - one `qr_token` and `qr_value` for each store
+- generated QR image path under `/uploads/qrcodes`
+- WhatsApp delivery results in `whatsapp_messages`
 - store-level `expires_at`, `is_used`, `is_expired`, `can_be_used`
 
 If you send `Authorization: Bearer {{user_token}}`, the order is linked to that user.
 
 If you do not send `Authorization`, then `customer_name`, `phone_number`, and `email` are required.
+
+To send the QR image on WhatsApp through Wawp V2, set:
+
+```env
+APP_BASE_URL=http://localhost:5000
+WHATSAPP_PROVIDER=wawp
+WHATSAPP_DEFAULT_TO=250781796824@c.us
+WAWP_API_BASE_URL=https://api.wawp.net
+WAWP_INSTANCE_ID=
+WAWP_ACCESS_TOKEN=
+```
 
 ### 10D. Verify QR Before Use
 

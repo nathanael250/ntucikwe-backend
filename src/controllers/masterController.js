@@ -11,6 +11,7 @@ const User = require("../models/User");
 const HttpError = require("../utils/httpError");
 const { requireFields, parsePagination } = require("../utils/controllerHelpers");
 const { signToken } = require("../utils/tokenUtils");
+const { sendOrderQrCodes } = require("../utils/whatsappService");
 
 const sanitizeRegistrationRole = (role) => {
   if (!role) {
@@ -328,12 +329,33 @@ const masterController = {
       });
     }
 
+    const whatsapp_messages = await sendOrderQrCodes({ order });
+    const whatsappByStoreId = new Map(
+      whatsapp_messages.map((message) => [Number(message.store_id), message])
+    );
+    const orderWithQrDelivery = {
+      ...order,
+      store_redemptions: (order.store_redemptions || []).map((redemption) => {
+        const delivery = whatsappByStoreId.get(Number(redemption.store_id));
+
+        return {
+          ...redemption,
+          qr_image_url: delivery ? delivery.qr_image_url || null : null,
+          qr_image_path: delivery ? delivery.qr_image_path || null : null,
+          whatsapp_delivery: delivery || null
+        };
+      })
+    };
+
     res.status(201).json({
       success: true,
       message: req.user
         ? "Order created successfully with store QR codes"
         : "Guest order created successfully with store QR codes",
-      data: order
+      data: {
+        ...orderWithQrDelivery,
+        whatsapp_messages
+      }
     });
   },
 

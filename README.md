@@ -63,6 +63,7 @@ npm run dev
 - Shared MySQL data access layer
 - Single fixed API endpoint using the `request` header instead of many changing route paths
 - Frontend-managed cart handoff to backend multi-store order QR redemption flow
+- QR image generation and WhatsApp delivery hook after checkout
 
 ## API Pattern
 
@@ -83,6 +84,8 @@ Protected actions still use the normal authorization header:
 ```http
 Authorization: Bearer <token>
 ```
+
+Guest checkout for `create_redemption_qr` can work without `Authorization` when the frontend sends customer contact fields.
 
 Examples:
 
@@ -110,6 +113,31 @@ curl -X POST http://localhost:5000/api \
     "limit": 10
   }'
 ```
+
+## WhatsApp QR Delivery
+
+After checkout, the backend now:
+
+- generates one QR image per store redemption
+- stores QR images under `/uploads/qrcodes`
+- attempts to send a WhatsApp message with the QR to the customer's phone
+
+Configure these variables in `.env`:
+
+```env
+APP_BASE_URL=http://localhost:5000
+WHATSAPP_PROVIDER=wawp
+WHATSAPP_DEFAULT_TO=250781796824@c.us
+WAWP_API_BASE_URL=https://api.wawp.net
+WAWP_INSTANCE_ID=
+WAWP_ACCESS_TOKEN=
+```
+
+Important:
+
+- `APP_BASE_URL` must be public so Wawp can fetch and send the QR image
+- `WHATSAPP_DEFAULT_TO` should follow Wawp chat format like `250781796824@c.us`
+- if WhatsApp is not configured, checkout still succeeds and the response includes delivery status
 
 ## Notes
 

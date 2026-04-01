@@ -11,5 +11,7 @@ uploads/*
 !uploads/ads/.gitkeep
 !uploads/deals/
 !uploads/deals/.gitkeep
+!uploads/qrcodes/
+!uploads/qrcodes/.gitkeep
 !uploads/stores/
 !uploads/stores/.gitkeep
