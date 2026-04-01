@@ -263,6 +263,88 @@ class RedemptionRequest {
     throw new HttpError(403, "You do not have access to this order");
   }
 
+  static async listUsedForActor({ actor, limit, offset, store_id, order_code, search }) {
+    const conditions = ["rr.status = 'used'"];
+    const params = [];
+    const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 100);
+    const safeOffset = Math.max(Number(offset) || 0, 0);
+
+    if (actor.role === "vendor") {
+      conditions.push("s.vendor_id = ?");
+      params.push(actor.id);
+    } else if (actor.role !== "admin") {
+      throw new HttpError(403, "You do not have access to used QR codes");
+    }
+
+    if (store_id) {
+      conditions.push("rr.store_id = ?");
+      params.push(Number(store_id));
+    }
+
+    if (order_code) {
+      conditions.push("o.order_code = ?");
+      params.push(order_code);
+    }
+
+    if (search) {
+      conditions.push(
+        `(
+          o.order_code LIKE ?
+          OR s.store_name LIKE ?
+          OR COALESCE(NULLIF(TRIM(CONCAT(customer.first_name, ' ', customer.last_name)), ''), o.customer_name, '') LIKE ?
+          OR COALESCE(customer.email, o.email, '') LIKE ?
+          OR COALESCE(customer.phone_number, o.phone_number, '') LIKE ?
+        )`
+      );
+      params.push(
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`,
+        `%${search}%`
+      );
+    }
+
+    const rows = await query(
+      `SELECT rr.*, o.order_code, o.status AS order_status, s.store_name, s.vendor_id,
+              COALESCE(NULLIF(TRIM(CONCAT(customer.first_name, ' ', customer.last_name)), ''), o.customer_name) AS customer_name,
+              COALESCE(customer.email, o.email) AS customer_email,
+              COALESCE(customer.phone_number, o.phone_number) AS customer_phone_number,
+              CONCAT(scanner.first_name, ' ', scanner.last_name) AS used_by_name
+       FROM redemption_requests rr
+       INNER JOIN orders o ON o.id = rr.order_id
+       INNER JOIN stores s ON s.id = rr.store_id
+       LEFT JOIN users customer ON customer.id = rr.user_id
+       LEFT JOIN users scanner ON scanner.id = rr.used_by
+       WHERE ${conditions.join(" AND ")}
+       ORDER BY rr.used_at DESC, rr.id DESC
+       LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+      params
+    );
+
+    const results = [];
+
+    for (const row of rows) {
+      const items = await query(
+        `SELECT rri.*, d.description, d.discount_rate
+         FROM redemption_request_items rri
+         INNER JOIN deals d ON d.id = rri.deal_id
+         WHERE rri.redemption_request_id = ?
+         ORDER BY rri.id ASC`,
+        [row.id]
+      );
+
+      results.push(
+        this.mapRedemptionState({
+          ...row,
+          items
+        })
+      );
+    }
+
+    return results;
+  }
+
   static async syncExpiredStatusesByOrder(orderId, connection = null) {
     const runner = connection || { execute: async (sql, params) => query(sql, params) };
 

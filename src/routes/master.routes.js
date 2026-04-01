@@ -85,6 +85,11 @@ const commandMap = {
     permission: commands.GET_ORDER_DETAILS,
     handler: masterController.getOrderDetails
   },
+  [commands.LIST_USED_REDEMPTION_QRS]: {
+    authRequired: true,
+    permission: commands.LIST_USED_REDEMPTION_QRS,
+    handler: masterController.listUsedRedemptionQrs
+  },
   [commands.VERIFY_REDEMPTION_QR]: {
     authRequired: true,
     permission: commands.VERIFY_REDEMPTION_QR,

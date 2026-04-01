@@ -354,6 +354,23 @@ const masterController = {
     });
   },
 
+  listUsedRedemptionQrs: async (req, res) => {
+    const pagination = parsePagination(req.query);
+    const redemptions = await RedemptionRequest.listUsedForActor({
+      actor: req.user,
+      ...pagination,
+      store_id: req.query.store_id,
+      order_code: req.query.order_code,
+      search: req.query.search
+    });
+
+    res.json({
+      success: true,
+      data: redemptions,
+      meta: pagination
+    });
+  },
+
   verifyRedemptionQr: async (req, res) => {
     requireFields(req.body, ["qr_token"]);
 

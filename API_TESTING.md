@@ -131,6 +131,7 @@ For admin testing:
 | `list_store_deals` | No | Any | Requires `store_id` |
 | `create_redemption_qr` | Optional | Guest or logged-in user | Frontend sends selected items and gets one QR per store |
 | `get_order_details` | Yes | Logged-in user / seller / admin | Fetch an order by `order_id` or `order_code` |
+| `list_used_redemption_qrs` | Yes | Admin/Vendor | Fetch already used seller QR codes with sold items |
 | `verify_redemption_qr` | Yes | Admin/Vendor | Seller checks QR status before accepting it |
 | `use_redemption_qr` | Yes | Admin/Vendor | Seller marks only that store QR as used |
 | `create_deal` | Yes | Vendor/Admin | Vendor can use own store only |
@@ -548,6 +549,45 @@ Vendors only see the parts of the order that belong to their own store.
 
 ### 10E. Verify QR Before Use
 
+### 10E. List Used QR Codes
+
+Headers:
+
+```http
+request: list_used_redemption_qrs
+Content-Type: application/json
+Authorization: Bearer {{admin_token_or_vendor_token}}
+```
+
+Body:
+
+```json
+{
+  "page": 1,
+  "limit": 10
+}
+```
+
+Optional filters:
+
+```json
+{
+  "page": 1,
+  "limit": 10,
+  "store_id": 1,
+  "order_code": "ORD-1743420000000-AB12CD34",
+  "search": "john@example.com"
+}
+```
+
+Behavior:
+
+- admin sees all used QR codes
+- vendor sees only used QR codes for their own store
+- each result includes used order info, customer info, store info, and the sold `items`
+
+### 10F. Verify QR Before Use
+
 Headers:
 
 ```http
@@ -571,7 +611,7 @@ Verification response now tells the seller whether the QR:
 - can still be used
 - and which store/order it belongs to
 
-### 10F. Mark QR As Used
+### 10G. Mark QR As Used
 
 Headers:
 
