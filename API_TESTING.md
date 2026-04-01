@@ -401,7 +401,7 @@ Fields:
 - `description` = `Black Friday TV offer`
 - `deal_category_id` = `1`
 - `start_date` = `2026-03-24 08:00:00`
-- `end_date` = `2026-03-30 23:59:59`
+- `end_date` = `2026-03-30 23:59:59` required
 - `status` = `active`
 - `images` = select one or many image files
 
@@ -416,6 +416,13 @@ The backend now inserts into both:
 
 in the same request.
 
+The response now also includes:
+
+- `end_date`
+- `is_started`
+- `is_expired`
+- `countdown_target`
+
 Example `curl`:
 
 ```bash
@@ -428,6 +435,8 @@ curl -X POST http://localhost:5000/api \
   -F "discount_price=750" \
   -F "description=Black Friday TV offer" \
   -F "deal_category_id=1" \
+  -F "start_date=2026-03-24 08:00:00" \
+  -F "end_date=2026-03-30 23:59:59" \
   -F "status=active" \
   -F "images=@/absolute/path/to/front.jpg" \
   -F "images=@/absolute/path/to/side.jpg"

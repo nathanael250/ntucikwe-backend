@@ -422,7 +422,13 @@ const masterController = {
   },
 
   createDeal: async (req, res) => {
-    requireFields(req.body, ["title", "store_id", "original_price", "discount_price"]);
+    requireFields(req.body, [
+      "title",
+      "store_id",
+      "original_price",
+      "discount_price",
+      "end_date"
+    ]);
 
     if (req.user.role === "vendor") {
       await Store.assertVendorOwnership(req.body.store_id, req.user.id);

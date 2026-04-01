@@ -2,6 +2,41 @@ const { pool, query } = require("../config/database");
 const HttpError = require("../utils/httpError");
 
 class Deal {
+  static normalizeSchedule({ start_date, end_date }) {
+    const normalizedStartDate = start_date || null;
+    const normalizedEndDate = end_date || null;
+
+    if (!normalizedEndDate) {
+      throw new HttpError(400, "end_date is required for every deal");
+    }
+
+    const parsedEndDate = new Date(normalizedEndDate);
+    if (Number.isNaN(parsedEndDate.getTime())) {
+      throw new HttpError(400, "end_date must be a valid date/time");
+    }
+
+    if (!normalizedStartDate) {
+      return {
+        start_date: null,
+        end_date: normalizedEndDate
+      };
+    }
+
+    const parsedStartDate = new Date(normalizedStartDate);
+    if (Number.isNaN(parsedStartDate.getTime())) {
+      throw new HttpError(400, "start_date must be a valid date/time");
+    }
+
+    if (parsedStartDate >= parsedEndDate) {
+      throw new HttpError(400, "end_date must be later than start_date");
+    }
+
+    return {
+      start_date: normalizedStartDate,
+      end_date: normalizedEndDate
+    };
+  }
+
   static computeDiscountRate(originalPrice, discountPrice) {
     const original = Number(originalPrice);
     const discount = Number(discountPrice);
@@ -27,6 +62,7 @@ class Deal {
       payload.original_price,
       payload.discount_price
     );
+    const schedule = this.normalizeSchedule(payload);
     const imagePaths = this.normalizeImagePaths(payload.image_paths || payload.images);
     const connection = await pool.getConnection();
 
@@ -46,8 +82,8 @@ class Deal {
           discountRate,
           payload.description || null,
           payload.deal_category_id || null,
-          payload.start_date || null,
-          payload.end_date || null,
+          schedule.start_date,
+          schedule.end_date,
           payload.status || "active"
         ]
       );
@@ -94,6 +130,24 @@ class Deal {
     });
   }
 
+  static mapDealState(deal) {
+    const now = new Date();
+    const endDate = deal.end_date ? new Date(deal.end_date) : null;
+    const startDate = deal.start_date ? new Date(deal.start_date) : null;
+    const isExpired =
+      deal.status === "expired" ||
+      (endDate && !Number.isNaN(endDate.getTime()) && endDate <= now);
+    const isStarted =
+      !startDate || (startDate && !Number.isNaN(startDate.getTime()) && startDate <= now);
+
+    return {
+      ...deal,
+      is_started: isStarted,
+      is_expired: Boolean(isExpired),
+      countdown_target: deal.end_date || null
+    };
+  }
+
   static async attachImages(deals) {
     if (!deals || deals.length === 0) {
       return deals;
@@ -133,6 +187,8 @@ class Deal {
   }
 
   static async findById(id) {
+    await this.expireEndedDeals();
+
     const rows = await query(
       `SELECT d.*, s.store_name, s.location AS store_location,
               dc.category_name AS deal_category_name
@@ -149,7 +205,7 @@ class Deal {
     }
 
     const [deal] = await this.attachImages([rows[0]]);
-    return deal;
+    return this.mapDealState(deal);
   }
 
   static async list(filters) {
@@ -204,7 +260,8 @@ class Deal {
       params
     );
 
-    return this.attachImages(deals);
+    const dealsWithImages = await this.attachImages(deals);
+    return dealsWithImages.map((deal) => this.mapDealState(deal));
   }
 
   static async addImage({ deal_id, image_path }) {
