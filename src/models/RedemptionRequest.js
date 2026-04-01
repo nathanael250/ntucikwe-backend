@@ -3,6 +3,21 @@ const { pool, query } = require("../config/database");
 const HttpError = require("../utils/httpError");
 
 class RedemptionRequest {
+  static normalizeQrToken(value) {
+    if (!value) {
+      return "";
+    }
+
+    const rawValue = String(value).trim();
+    const legacyPrefix = "deals-platform:redemption:";
+
+    if (rawValue.startsWith(legacyPrefix)) {
+      return rawValue.slice(legacyPrefix.length).trim();
+    }
+
+    return rawValue;
+  }
+
   static getExpiryMinutes(customValue) {
     const rawValue = customValue || process.env.QR_EXPIRY_MINUTES || 1440;
     const expiryMinutes = Number(rawValue);
@@ -64,7 +79,7 @@ class RedemptionRequest {
   }
 
   static buildQrValue(qrToken) {
-    return `deals-platform:redemption:${qrToken}`;
+    return this.normalizeQrToken(qrToken);
   }
 
   static buildOrderCode() {
@@ -359,9 +374,10 @@ class RedemptionRequest {
   }
 
   static async syncExpiredStatusByToken(qrToken) {
+    const normalizedToken = this.normalizeQrToken(qrToken);
     const rows = await query(
       "SELECT order_id FROM redemption_requests WHERE qr_token = ? LIMIT 1",
-      [qrToken]
+      [normalizedToken]
     );
 
     if (!rows[0]) {
@@ -645,11 +661,12 @@ class RedemptionRequest {
   }
 
   static async findByToken(qrToken) {
-    await this.syncExpiredStatusByToken(qrToken);
+    const normalizedToken = this.normalizeQrToken(qrToken);
+    await this.syncExpiredStatusByToken(normalizedToken);
 
     const rows = await query(
       "SELECT id FROM redemption_requests WHERE qr_token = ? LIMIT 1",
-      [qrToken]
+      [normalizedToken]
     );
 
     if (!rows[0]) {
@@ -660,6 +677,7 @@ class RedemptionRequest {
   }
 
   static async markAsUsed({ qr_token, used_by }) {
+    const normalizedToken = this.normalizeQrToken(qr_token);
     const connection = await pool.getConnection();
 
     try {
@@ -671,7 +689,7 @@ class RedemptionRequest {
          WHERE qr_token = ?
          LIMIT 1
          FOR UPDATE`,
-        [qr_token]
+        [normalizedToken]
       );
 
       const request = rows[0];
