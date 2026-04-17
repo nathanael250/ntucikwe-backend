@@ -105,6 +105,12 @@ const commandMap = {
     permission: commands.CREATE_DEAL,
     handler: masterController.createDeal
   },
+  [commands.UPDATE_DEAL]: {
+    authRequired: true,
+    permission: commands.UPDATE_DEAL,
+    idSource: "id",
+    handler: masterController.updateDeal
+  },
   [commands.LIST_DEALS]: {
     handler: masterController.listDeals
   },
@@ -180,6 +186,10 @@ const uploadMap = {
     { name: "profile", maxCount: 1 }
   ]),
   [commands.CREATE_DEAL]: dealsUpload.fields([
+    { name: "images", maxCount: 10 },
+    { name: "images[]", maxCount: 10 }
+  ]),
+  [commands.UPDATE_DEAL]: dealsUpload.fields([
     { name: "images", maxCount: 10 },
     { name: "images[]", maxCount: 10 }
   ]),

@@ -2,6 +2,30 @@ const { pool, query } = require("../config/database");
 const HttpError = require("../utils/httpError");
 
 class Deal {
+  static normalizeSpecification(specification) {
+    if (
+      specification === undefined ||
+      specification === null ||
+      specification === ""
+    ) {
+      return null;
+    }
+
+    if (typeof specification === "string") {
+      try {
+        return JSON.parse(specification);
+      } catch (_error) {
+        throw new HttpError(400, "specification must be valid JSON");
+      }
+    }
+
+    if (typeof specification === "object" && !Array.isArray(specification)) {
+      return specification;
+    }
+
+    throw new HttpError(400, "specification must be a JSON object");
+  }
+
   static normalizeSchedule({ start_date, end_date }) {
     const normalizedStartDate = start_date || null;
     const normalizedEndDate = end_date || null;
@@ -18,7 +42,7 @@ class Deal {
     if (!normalizedStartDate) {
       return {
         start_date: null,
-        end_date: normalizedEndDate
+        end_date: normalizedEndDate,
       };
     }
 
@@ -33,7 +57,7 @@ class Deal {
 
     return {
       start_date: normalizedStartDate,
-      end_date: normalizedEndDate
+      end_date: normalizedEndDate,
     };
   }
 
@@ -42,7 +66,10 @@ class Deal {
     const discount = Number(discountPrice);
 
     if (discount > original) {
-      throw new HttpError(400, "Discount price cannot be greater than original price");
+      throw new HttpError(
+        400,
+        "Discount price cannot be greater than original price",
+      );
     }
 
     if (original <= 0) {
@@ -53,17 +80,22 @@ class Deal {
   }
 
   static async create(payload) {
-    const store = await query("SELECT id FROM stores WHERE id = ? LIMIT 1", [payload.store_id]);
+    const store = await query("SELECT id FROM stores WHERE id = ? LIMIT 1", [
+      payload.store_id,
+    ]);
     if (!store[0]) {
       throw new HttpError(404, "Store not found");
     }
 
     const discountRate = this.computeDiscountRate(
       payload.original_price,
-      payload.discount_price
+      payload.discount_price,
     );
     const schedule = this.normalizeSchedule(payload);
-    const imagePaths = this.normalizeImagePaths(payload.image_paths || payload.images);
+    const specification = this.normalizeSpecification(payload.specification);
+    const imagePaths = this.normalizeImagePaths(
+      payload.image_paths || payload.images,
+    );
     const connection = await pool.getConnection();
 
     try {
@@ -72,8 +104,8 @@ class Deal {
       const [result] = await connection.execute(
         `INSERT INTO deals
           (title, store_id, original_price, discount_price, discount_rate, description,
-           deal_category_id, start_date, end_date, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           specification, deal_category_id, start_date, end_date, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           payload.title,
           payload.store_id,
@@ -81,17 +113,18 @@ class Deal {
           payload.discount_price,
           discountRate,
           payload.description || null,
+          specification ? JSON.stringify(specification) : null,
           payload.deal_category_id || null,
           schedule.start_date,
           schedule.end_date,
-          payload.status || "active"
-        ]
+          payload.status || "active",
+        ],
       );
 
       for (const imagePath of imagePaths) {
         await connection.execute(
           "INSERT INTO deal_images (deal_id, image_path) VALUES (?, ?)",
-          [result.insertId, imagePath]
+          [result.insertId, imagePath],
         );
       }
 
@@ -122,11 +155,33 @@ class Deal {
             ? image.image_path || image.path || image.url
             : null;
 
-      if (!imagePath || typeof imagePath !== "string" || imagePath.trim() === "") {
+      if (
+        !imagePath ||
+        typeof imagePath !== "string" ||
+        imagePath.trim() === ""
+      ) {
         throw new HttpError(400, "Each image must contain a valid path");
       }
 
       return imagePath.trim();
+    });
+  }
+
+  static mergeSchedule(existingDeal, payload) {
+    const startProvided = Object.prototype.hasOwnProperty.call(
+      payload,
+      "start_date",
+    );
+    const endProvided = Object.prototype.hasOwnProperty.call(payload, "end_date");
+
+    const nextStartDate = startProvided
+      ? payload.start_date || null
+      : existingDeal.start_date;
+    const nextEndDate = endProvided ? payload.end_date || null : existingDeal.end_date;
+
+    return this.normalizeSchedule({
+      start_date: nextStartDate,
+      end_date: nextEndDate,
     });
   }
 
@@ -138,13 +193,15 @@ class Deal {
       deal.status === "expired" ||
       (endDate && !Number.isNaN(endDate.getTime()) && endDate <= now);
     const isStarted =
-      !startDate || (startDate && !Number.isNaN(startDate.getTime()) && startDate <= now);
+      !startDate ||
+      (startDate && !Number.isNaN(startDate.getTime()) && startDate <= now);
 
     return {
       ...deal,
+      specification: this.normalizeSpecification(deal.specification),
       is_started: isStarted,
       is_expired: Boolean(isExpired),
-      countdown_target: deal.end_date || null
+      countdown_target: deal.end_date || null,
     };
   }
 
@@ -160,7 +217,7 @@ class Deal {
        FROM deal_images
        WHERE deal_id IN (${placeholders})
        ORDER BY id ASC`,
-      dealIds
+      dealIds,
     );
 
     const imagesByDealId = images.reduce((accumulator, image) => {
@@ -172,7 +229,7 @@ class Deal {
 
     return deals.map((deal) => ({
       ...deal,
-      images: imagesByDealId[Number(deal.id)] || []
+      images: imagesByDealId[Number(deal.id)] || [],
     }));
   }
 
@@ -182,7 +239,7 @@ class Deal {
        SET status = 'expired'
        WHERE end_date IS NOT NULL
          AND end_date < NOW()
-         AND status <> 'expired'`
+         AND status <> 'expired'`,
     );
   }
 
@@ -197,7 +254,7 @@ class Deal {
        LEFT JOIN deal_categories dc ON dc.id = d.deal_category_id
        WHERE d.id = ?
       LIMIT 1`,
-      [id]
+      [id],
     );
 
     if (!rows[0]) {
@@ -242,11 +299,19 @@ class Deal {
     }
 
     if (filters.search) {
-      conditions.push("(d.title LIKE ? OR d.description LIKE ? OR s.store_name LIKE ?)");
-      params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+      conditions.push(
+        "(d.title LIKE ? OR d.description LIKE ? OR s.store_name LIKE ?)",
+      );
+      params.push(
+        `%${filters.search}%`,
+        `%${filters.search}%`,
+        `%${filters.search}%`,
+      );
     }
 
-    const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    const whereClause = conditions.length
+      ? `WHERE ${conditions.join(" AND ")}`
+      : "";
 
     const deals = await query(
       `SELECT d.*, s.store_name, s.location AS store_location,
@@ -257,7 +322,7 @@ class Deal {
        ${whereClause}
        ORDER BY d.created_at DESC
        LIMIT ${safeLimit} OFFSET ${safeOffset}`,
-      params
+      params,
     );
 
     const dealsWithImages = await this.attachImages(deals);
@@ -272,11 +337,122 @@ class Deal {
 
     const result = await query(
       "INSERT INTO deal_images (deal_id, image_path) VALUES (?, ?)",
-      [deal_id, image_path]
+      [deal_id, image_path],
     );
 
-    const rows = await query("SELECT * FROM deal_images WHERE id = ? LIMIT 1", [result.insertId]);
+    const rows = await query("SELECT * FROM deal_images WHERE id = ? LIMIT 1", [
+      result.insertId,
+    ]);
     return rows[0] || null;
+  }
+
+  static async update(id, payload) {
+    const existingDeal = await this.findById(id);
+    if (!existingDeal) {
+      throw new HttpError(404, "Deal not found");
+    }
+
+    const nextStoreId = payload.store_id || existingDeal.store_id;
+    const store = await query("SELECT id FROM stores WHERE id = ? LIMIT 1", [
+      nextStoreId,
+    ]);
+    if (!store[0]) {
+      throw new HttpError(404, "Store not found");
+    }
+
+    const nextOriginalPrice =
+      payload.original_price !== undefined && payload.original_price !== ""
+        ? payload.original_price
+        : existingDeal.original_price;
+    const nextDiscountPrice =
+      payload.discount_price !== undefined && payload.discount_price !== ""
+        ? payload.discount_price
+        : existingDeal.discount_price;
+    const nextDiscountRate = this.computeDiscountRate(
+      nextOriginalPrice,
+      nextDiscountPrice,
+    );
+    const nextSchedule = this.mergeSchedule(existingDeal, payload);
+    const specificationProvided = Object.prototype.hasOwnProperty.call(
+      payload,
+      "specification",
+    );
+    const nextSpecification = specificationProvided
+      ? this.normalizeSpecification(payload.specification)
+      : existingDeal.specification;
+    const replaceImages =
+      String(payload.replace_images || "").toLowerCase() === "true" ||
+      payload.replace_images === true ||
+      payload.replace_images === 1 ||
+      payload.replace_images === "1";
+    const incomingImages = this.normalizeImagePaths(
+      payload.image_paths || payload.images,
+    );
+    const nextStatus =
+      payload.status ||
+      (existingDeal.status === "expired" &&
+      new Date(nextSchedule.end_date) > new Date()
+        ? "active"
+        : existingDeal.status);
+
+    const connection = await pool.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      await connection.execute(
+        `UPDATE deals
+         SET title = ?,
+             store_id = ?,
+             original_price = ?,
+             discount_price = ?,
+             discount_rate = ?,
+             description = ?,
+             specification = ?,
+             deal_category_id = ?,
+             start_date = ?,
+             end_date = ?,
+             status = ?
+         WHERE id = ?`,
+        [
+          payload.title || existingDeal.title,
+          nextStoreId,
+          nextOriginalPrice,
+          nextDiscountPrice,
+          nextDiscountRate,
+          payload.description !== undefined
+            ? payload.description || null
+            : existingDeal.description,
+          nextSpecification ? JSON.stringify(nextSpecification) : null,
+          payload.deal_category_id !== undefined
+            ? payload.deal_category_id || null
+            : existingDeal.deal_category_id,
+          nextSchedule.start_date,
+          nextSchedule.end_date,
+          nextStatus,
+          id,
+        ],
+      );
+
+      if (replaceImages) {
+        await connection.execute("DELETE FROM deal_images WHERE deal_id = ?", [id]);
+      }
+
+      for (const imagePath of incomingImages) {
+        await connection.execute(
+          "INSERT INTO deal_images (deal_id, image_path) VALUES (?, ?)",
+          [id, imagePath],
+        );
+      }
+
+      await connection.commit();
+      return this.findById(id);
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 }
 

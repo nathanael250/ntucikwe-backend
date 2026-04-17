@@ -66,6 +66,7 @@ CREATE TABLE deals (
     discount_price DECIMAL(12,2) NOT NULL,
     discount_rate DECIMAL(5,2) DEFAULT 0.00,
     description TEXT,
+    specification JSON NULL,
     deal_category_id BIGINT UNSIGNED,
     start_date DATETIME NULL,
     end_date DATETIME NULL,

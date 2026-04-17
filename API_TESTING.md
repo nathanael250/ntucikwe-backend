@@ -135,6 +135,7 @@ For admin testing:
 | `verify_redemption_qr` | Yes | Admin/Vendor | Seller checks QR status before accepting it |
 | `use_redemption_qr` | Yes | Admin/Vendor | Seller marks only that store QR as used |
 | `create_deal` | Yes | Vendor/Admin | Vendor can use own store only |
+| `update_deal` | Yes | Vendor/Admin | Renew or edit an existing deal, requires `id` |
 | `list_deals` | No | Any | Supports filters |
 | `get_deal` | No | Any | Requires `id` |
 | `add_deal_image` | Yes | Vendor/Admin | Requires `id`, `image_path` |
@@ -399,6 +400,7 @@ Fields:
 - `original_price` = `1000`
 - `discount_price` = `750`
 - `description` = `Black Friday TV offer`
+- `specification` = `{"brand":"Samsung","screen_size":"55 inch","resolution":"4K UHD"}`
 - `deal_category_id` = `1`
 - `start_date` = `2026-03-24 08:00:00`
 - `end_date` = `2026-03-30 23:59:59` required
@@ -419,6 +421,7 @@ in the same request.
 The response now also includes:
 
 - `end_date`
+- `specification`
 - `is_started`
 - `is_expired`
 - `countdown_target`
@@ -434,6 +437,7 @@ curl -X POST http://localhost:5000/api \
   -F "original_price=1000" \
   -F "discount_price=750" \
   -F "description=Black Friday TV offer" \
+  -F 'specification={"brand":"Samsung","screen_size":"55 inch","resolution":"4K UHD"}' \
   -F "deal_category_id=1" \
   -F "start_date=2026-03-24 08:00:00" \
   -F "end_date=2026-03-30 23:59:59" \
@@ -441,6 +445,51 @@ curl -X POST http://localhost:5000/api \
   -F "images=@/absolute/path/to/front.jpg" \
   -F "images=@/absolute/path/to/side.jpg"
 ```
+
+### 10B. List Deals For One Store
+
+### 10A. Update Deal / Renew Expired Deal
+
+Headers:
+
+```http
+request: update_deal
+Authorization: Bearer {{vendor_token}}
+```
+
+Body:
+
+Use `form-data` when updating images.
+
+Fields:
+
+- `id` = `{{deal_id}}` required
+- `title` = optional
+- `original_price` = optional
+- `discount_price` = optional
+- `description` = optional
+- `specification` = optional JSON string
+- `deal_category_id` = optional
+- `start_date` = optional
+- `end_date` = optional
+- `status` = optional, set to `active` to renew
+- `replace_images` = `true` if you want to replace existing deal images
+- `images` = optional new image files
+
+Example `curl` to renew an expired deal:
+
+```bash
+curl -X POST http://localhost:5000/api \
+  -H "request: update_deal" \
+  -H "Authorization: Bearer <vendor_token>" \
+  -F "id=1" \
+  -F "title=Samsung TV Discount Renewed" \
+  -F "end_date=2026-04-30 23:59:59" \
+  -F "status=active" \
+  -F 'specification={"brand":"Samsung","screen_size":"55 inch","resolution":"4K UHD","model":"2026"}'
+```
+
+If the deal was expired and you give it a future `end_date`, the backend can reactivate it.
 
 ### 10B. List Deals For One Store
 

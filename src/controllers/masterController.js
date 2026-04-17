@@ -473,6 +473,37 @@ const masterController = {
     });
   },
 
+  updateDeal: async (req, res) => {
+    const existingDeal = await Deal.findById(req.params.id);
+    if (!existingDeal) {
+      throw new HttpError(404, "Deal not found");
+    }
+
+    if (req.user.role === "vendor") {
+      await Store.assertVendorOwnership(existingDeal.store_id, req.user.id);
+    }
+
+    if (req.body.store_id && req.user.role === "vendor") {
+      await Store.assertVendorOwnership(req.body.store_id, req.user.id);
+    }
+
+    const uploadedImages = getUploadedFiles(req).map(
+      (file) => `/uploads/deals/${file.filename}`
+    );
+    const existingImages = parseJsonArrayField(req.body.images);
+
+    const deal = await Deal.update(req.params.id, {
+      ...req.body,
+      images: [...existingImages, ...uploadedImages]
+    });
+
+    res.json({
+      success: true,
+      message: "Deal updated successfully",
+      data: deal
+    });
+  },
+
   listDeals: async (req, res) => {
     const pagination = parsePagination(req.query);
     const deals = await Deal.list({

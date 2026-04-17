@@ -21,6 +21,7 @@ module.exports = {
   VERIFY_REDEMPTION_QR: "verify_redemption_qr",
   USE_REDEMPTION_QR: "use_redemption_qr",
   CREATE_DEAL: "create_deal",
+  UPDATE_DEAL: "update_deal",
   LIST_DEALS: "list_deals",
   GET_DEAL: "get_deal",
   ADD_DEAL_IMAGE: "add_deal_image",
