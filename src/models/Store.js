@@ -138,6 +138,16 @@ class Store {
 
     return this.findById(id);
   }
+
+  static async delete(id) {
+    const existingStore = await this.findById(id);
+    if (!existingStore) {
+      throw new HttpError(404, "Store not found");
+    }
+
+    await query("DELETE FROM stores WHERE id = ?", [id]);
+    return existingStore;
+  }
 }
 
 module.exports = Store;

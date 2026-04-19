@@ -49,15 +49,16 @@ If you use Postman, create these variables:
 - `admin_token` = empty first
 - `store_id` = empty first
 - `deal_id` = empty first
+- `deal_image_id` = empty first
 - `user_id` = empty first
 - `notification_id` = empty first
 
 ## Before Testing
 
 1. Make sure MySQL is running.
-2. Import [database/schema.sql](/home/nathanadmin/Projects/MOPAS/Ntucikwe_backend/database/schema.sql).
-3. Optionally import [database/seed.sql](/home/nathanadmin/Projects/MOPAS/Ntucikwe_backend/database/seed.sql).
-4. Configure [.env](/home/nathanadmin/Projects/MOPAS/Ntucikwe_backend/.env).
+2. Import [database/schema.sql](/Users/apple/Projects/mopas/ntucikwe-backend/database/schema.sql).
+3. Optionally import [database/seed.sql](/Users/apple/Projects/mopas/ntucikwe-backend/database/seed.sql).
+4. Configure `.env`.
 5. Start the server with `npm run dev`.
 
 ## Important Role Note
@@ -87,27 +88,33 @@ Or insert a dedicated admin user manually with a hashed password.
 2. `register` vendor
 3. `login` vendor
 4. `get_profile`
-5. `list_store_categories`
-6. `list_deal_categories`
-7. `create_store`
-8. `list_stores`
-9. `create_deal`
-10. `list_deals`
-11. `get_deal`
-12. `add_deal_image`
-13. `create_ad`
-14. `list_ads`
-15. `my_notifications`
+5. `update_user`
+6. `list_store_categories`
+7. `list_deal_categories`
+8. `create_store`
+9. `update_store`
+10. `list_stores`
+11. `create_deal`
+12. `update_deal`
+13. `update_deal_image`
+14. `list_deals`
+15. `get_deal`
+16. `add_deal_image`
+17. `create_ad`
+18. `list_ads`
+19. `my_notifications`
 
 For admin testing:
 
 1. `login` as admin
 2. `list_users`
-3. `update_user_status`
-4. `create_store_category`
-5. `create_deal_category`
-6. `create_subscription_plan`
-7. `create_notification`
+3. `update_user`
+4. `update_user_status`
+5. `delete_user`
+6. `create_store_category`
+7. `create_deal_category`
+8. `create_subscription_plan`
+9. `create_notification`
 
 ## Commands Summary
 
@@ -118,13 +125,16 @@ For admin testing:
 | `login` | No | Any | Returns JWT token |
 | `get_profile` | Yes | Any logged-in user | Current user profile |
 | `list_users` | Yes | Admin | List users |
+| `update_user` | Yes | Admin or owner | Requires `id`; admin can update `role`, `status`, `email_verified` |
 | `update_user_status` | Yes | Admin | Requires `id`, `status` |
+| `delete_user` | Yes | Admin | Requires `id`; cascades to owned stores, deals, ads, notifications |
 | `create_store_category` | Yes | Admin | Create store category |
 | `list_store_categories` | No | Any | List store categories |
 | `create_deal_category` | Yes | Admin | Create deal category |
 | `list_deal_categories` | No | Any | List deal categories |
 | `create_store` | Yes | Vendor/Admin | Vendor creates own store |
-| `update_store` | Yes | Vendor/Admin | Update store details, banner, profile image |
+| `update_store` | Yes | Vendor/Admin | Partial update supported; send only changed fields |
+| `delete_store` | Yes | Vendor/Admin | Requires `id`; vendor can delete only own store |
 | `list_stores` | No | Any | Supports filters |
 | `list_user_stores` | No | Any | Requires `user_id` |
 | `get_store` | No | Any | Requires `id` |
@@ -135,10 +145,13 @@ For admin testing:
 | `verify_redemption_qr` | Yes | Admin/Vendor | Seller checks QR status before accepting it |
 | `use_redemption_qr` | Yes | Admin/Vendor | Seller marks only that store QR as used |
 | `create_deal` | Yes | Vendor/Admin | Vendor can use own store only |
-| `update_deal` | Yes | Vendor/Admin | Renew or edit an existing deal, requires `id` |
+| `update_deal` | Yes | Vendor/Admin | Partial update supported; set `replace_images=true` to replace all deal images |
+| `delete_deal` | Yes | Vendor/Admin | Requires `id`; vendor can delete only own deal |
 | `list_deals` | No | Any | Supports filters |
 | `get_deal` | No | Any | Requires `id` |
 | `add_deal_image` | Yes | Vendor/Admin | Requires `id`, `image_path` |
+| `update_deal_image` | Yes | Vendor/Admin | Requires `image_id`; replace one image only |
+| `delete_deal_image` | Yes | Vendor/Admin | Requires `image_id`; delete one image only |
 | `create_ad` | Yes | Vendor/Admin | Vendor uses own account |
 | `list_ads` | No | Any | Supports filters |
 | `create_subscription_plan` | Yes | Admin | Create plan |
@@ -233,6 +246,51 @@ Body:
 {}
 ```
 
+### 4B. Update User
+
+Admins can update any user. Vendors and public users can update only themselves.
+
+Headers:
+
+```http
+request: update_user
+Content-Type: application/json
+Authorization: Bearer {{vendor_token}}
+```
+
+Body:
+
+```json
+{
+  "id": {{user_id}},
+  "first_name": "Alice Updated",
+  "last_name": "Vendor Updated",
+  "phone_number": "0781111111",
+  "address": "Kigali Heights",
+  "password": "secret456"
+}
+```
+
+### 4C. Delete User
+
+Admin only.
+
+Headers:
+
+```http
+request: delete_user
+Content-Type: application/json
+Authorization: Bearer {{admin_token}}
+```
+
+Body:
+
+```json
+{
+  "id": {{user_id}}
+}
+```
+
 ### 5. List Store Categories
 
 Headers:
@@ -291,7 +349,7 @@ Save:
 
 ### 7B. Update Store
 
-Use `form-data` when updating the banner and profile image.
+Use `form-data` when updating the banner and profile image. You can also send only `id` plus one image field if you want to change just the banner or profile image without changing the rest of the store data.
 
 Headers:
 
@@ -321,6 +379,34 @@ curl -X POST http://localhost:5000/api \
   -F "description=Updated store description" \
   -F "banner=@/absolute/path/to/banner.jpg" \
   -F "profile_image=@/absolute/path/to/profile.jpg"
+```
+
+Example to change only the profile image:
+
+```bash
+curl -X POST http://localhost:5000/api \
+  -H "request: update_store" \
+  -H "Authorization: Bearer <vendor_token>" \
+  -F "id=1" \
+  -F "profile_image=@/absolute/path/to/new-profile.jpg"
+```
+
+### 7C. Delete Store
+
+Headers:
+
+```http
+request: delete_store
+Content-Type: application/json
+Authorization: Bearer {{vendor_token}}
+```
+
+Body:
+
+```json
+{
+  "id": {{store_id}}
+}
 ```
 
 ### 8. List Stores
@@ -410,6 +496,7 @@ Fields:
 Save:
 
 - `data.id` as `deal_id`
+- `data.images[0].id` as `deal_image_id` if at least one image was returned
 
 The backend now inserts into both:
 
@@ -490,6 +577,75 @@ curl -X POST http://localhost:5000/api \
 ```
 
 If the deal was expired and you give it a future `end_date`, the backend can reactivate it.
+
+To replace all existing images in one request, send:
+
+- `replace_images` = `true`
+- new `images` files
+
+If you only want to update text or prices, you can send just those fields and skip the images completely.
+
+### 10AA. Replace One Deal Image Only
+
+This changes one image without updating the whole deal.
+
+Headers:
+
+```http
+request: update_deal_image
+Authorization: Bearer {{vendor_token}}
+```
+
+Fields:
+
+- `image_id` = `{{deal_image_id}}`
+- `image` = select a new image file
+
+Example `curl`:
+
+```bash
+curl -X POST http://localhost:5000/api \
+  -H "request: update_deal_image" \
+  -H "Authorization: Bearer <vendor_token>" \
+  -F "image_id=1" \
+  -F "image=@/absolute/path/to/replacement.jpg"
+```
+
+### 10AB. Delete One Deal Image
+
+Headers:
+
+```http
+request: delete_deal_image
+Content-Type: application/json
+Authorization: Bearer {{vendor_token}}
+```
+
+Body:
+
+```json
+{
+  "image_id": {{deal_image_id}}
+}
+```
+
+### 10AC. Delete Deal
+
+Headers:
+
+```http
+request: delete_deal
+Content-Type: application/json
+Authorization: Bearer {{vendor_token}}
+```
+
+Body:
+
+```json
+{
+  "id": {{deal_id}}
+}
+```
 
 ### 10B. List Deals For One Store
 

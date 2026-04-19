@@ -4,6 +4,50 @@ const { query } = require("../config/database");
 const HttpError = require("../utils/httpError");
 
 class User extends BaseModel {
+  static normalizeRole(role) {
+    if (role === undefined) {
+      return undefined;
+    }
+
+    if (!["admin", "vendor", "public_user"].includes(role)) {
+      throw new HttpError(400, "role must be admin, vendor, or public_user");
+    }
+
+    return role;
+  }
+
+  static normalizeStatus(status) {
+    if (status === undefined) {
+      return undefined;
+    }
+
+    if (!["active", "inactive", "blocked"].includes(status)) {
+      throw new HttpError(400, "status must be active, inactive, or blocked");
+    }
+
+    return status;
+  }
+
+  static normalizeEmailVerified(value) {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value === "boolean") {
+      return value ? 1 : 0;
+    }
+
+    if (value === 1 || value === "1" || value === "true") {
+      return 1;
+    }
+
+    if (value === 0 || value === "0" || value === "false") {
+      return 0;
+    }
+
+    throw new HttpError(400, "email_verified must be true or false");
+  }
+
   static async create(payload) {
     const existing = await this.findByEmail(payload.email);
     if (existing) {
@@ -100,8 +144,98 @@ class User extends BaseModel {
   }
 
   static async updateStatus(id, status) {
-    await query("UPDATE users SET status = ? WHERE id = ?", [status, id]);
+    const nextStatus = this.normalizeStatus(status);
+    await query("UPDATE users SET status = ? WHERE id = ?", [nextStatus, id]);
     return this.getSafeUserById(id);
+  }
+
+  static async update(id, payload) {
+    const existingUser = await this.findById(id);
+    if (!existingUser) {
+      throw new HttpError(404, "User not found");
+    }
+
+    const nextEmail =
+      payload.email !== undefined ? String(payload.email).trim() : existingUser.email;
+    if (nextEmail !== existingUser.email) {
+      const emailOwner = await this.findByEmail(nextEmail);
+      if (emailOwner && Number(emailOwner.id) !== Number(id)) {
+        throw new HttpError(409, "Email already exists");
+      }
+    }
+
+    let nextPhoneNumber =
+      payload.phone_number !== undefined
+        ? String(payload.phone_number).trim()
+        : existingUser.phone_number;
+    nextPhoneNumber = nextPhoneNumber || null;
+
+    if (nextPhoneNumber && nextPhoneNumber !== existingUser.phone_number) {
+      const rows = await query("SELECT id FROM users WHERE phone_number = ? LIMIT 1", [
+        nextPhoneNumber
+      ]);
+      if (rows[0] && Number(rows[0].id) !== Number(id)) {
+        throw new HttpError(409, "Phone number already exists");
+      }
+    }
+
+    const nextPassword =
+      payload.password !== undefined && payload.password !== ""
+        ? await bcrypt.hash(payload.password, 10)
+        : existingUser.password;
+    const nextRole =
+      payload.role !== undefined ? this.normalizeRole(payload.role) : existingUser.role;
+    const nextStatus =
+      payload.status !== undefined
+        ? this.normalizeStatus(payload.status)
+        : existingUser.status;
+    const nextEmailVerified =
+      payload.email_verified !== undefined
+        ? this.normalizeEmailVerified(payload.email_verified)
+        : existingUser.email_verified;
+
+    await query(
+      `UPDATE users
+       SET first_name = ?,
+           last_name = ?,
+           email = ?,
+           phone_number = ?,
+           address = ?,
+           password = ?,
+           role = ?,
+           email_verified = ?,
+           status = ?
+       WHERE id = ?`,
+      [
+        payload.first_name !== undefined ? payload.first_name : existingUser.first_name,
+        payload.last_name !== undefined ? payload.last_name : existingUser.last_name,
+        nextEmail,
+        nextPhoneNumber,
+        payload.address !== undefined ? payload.address || null : existingUser.address,
+        nextPassword,
+        nextRole,
+        nextEmailVerified,
+        nextStatus,
+        id
+      ]
+    );
+
+    return this.getSafeUserById(id);
+  }
+
+  static async findById(id) {
+    const rows = await query("SELECT * FROM users WHERE id = ? LIMIT 1", [id]);
+    return rows[0] || null;
+  }
+
+  static async delete(id) {
+    const existingUser = await this.getSafeUserById(id);
+    if (!existingUser) {
+      throw new HttpError(404, "User not found");
+    }
+
+    await query("DELETE FROM users WHERE id = ?", [id]);
+    return existingUser;
   }
 }
 

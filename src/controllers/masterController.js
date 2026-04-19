@@ -140,6 +140,33 @@ const masterController = {
     });
   },
 
+  updateUser: async (req, res) => {
+    const targetUser = await User.getSafeUserById(req.params.id);
+    if (!targetUser) {
+      throw new HttpError(404, "User not found");
+    }
+
+    const isAdmin = req.user.role === "admin";
+    const isSelf = Number(req.user.id) === Number(req.params.id);
+    if (!isAdmin && !isSelf) {
+      throw new HttpError(403, "You can only update your own account");
+    }
+
+    const payload = { ...req.body };
+    if (!isAdmin) {
+      delete payload.role;
+      delete payload.status;
+      delete payload.email_verified;
+    }
+
+    const user = await User.update(req.params.id, payload);
+    res.json({
+      success: true,
+      message: "User updated successfully",
+      data: user
+    });
+  },
+
   updateUserStatus: async (req, res) => {
     requireFields(req.body, ["status"]);
     const user = await User.updateStatus(req.params.id, req.body.status);
@@ -147,6 +174,15 @@ const masterController = {
       success: true,
       message: "User status updated",
       data: user
+    });
+  },
+
+  deleteUser: async (req, res) => {
+    const deletedUser = await User.delete(req.params.id);
+    res.json({
+      success: true,
+      message: "User deleted successfully",
+      data: deletedUser
     });
   },
 
@@ -222,6 +258,24 @@ const masterController = {
       success: true,
       message: "Store updated successfully",
       data: store
+    });
+  },
+
+  deleteStore: async (req, res) => {
+    const existingStore = await Store.findById(req.params.id);
+    if (!existingStore) {
+      throw new HttpError(404, "Store not found");
+    }
+
+    if (req.user.role === "vendor") {
+      await Store.assertVendorOwnership(req.params.id, req.user.id);
+    }
+
+    const deletedStore = await Store.delete(req.params.id);
+    res.json({
+      success: true,
+      message: "Store deleted successfully",
+      data: deletedStore
     });
   },
 
@@ -504,6 +558,24 @@ const masterController = {
     });
   },
 
+  deleteDeal: async (req, res) => {
+    const existingDeal = await Deal.findById(req.params.id);
+    if (!existingDeal) {
+      throw new HttpError(404, "Deal not found");
+    }
+
+    if (req.user.role === "vendor") {
+      await Store.assertVendorOwnership(existingDeal.store_id, req.user.id);
+    }
+
+    const deletedDeal = await Deal.delete(req.params.id);
+    res.json({
+      success: true,
+      message: "Deal deleted successfully",
+      data: deletedDeal
+    });
+  },
+
   listDeals: async (req, res) => {
     const pagination = parsePagination(req.query);
     const deals = await Deal.list({
@@ -549,6 +621,47 @@ const masterController = {
     });
 
     res.status(201).json({ success: true, data: image });
+  },
+
+  updateDealImage: async (req, res) => {
+    const existingImage = await Deal.findImageById(req.params.id);
+    if (!existingImage) {
+      throw new HttpError(404, "Deal image not found");
+    }
+
+    if (req.user.role === "vendor") {
+      await Store.assertVendorOwnership(existingImage.store_id, req.user.id);
+    }
+
+    const [uploadedFile] = getUploadedFiles(req);
+    const uploadedImagePath = uploadedFile ? `/uploads/deals/${uploadedFile.filename}` : null;
+    const imagePath = uploadedImagePath || req.body.image_path;
+    requireFields({ image_path: imagePath }, ["image_path"]);
+
+    const image = await Deal.updateImage(req.params.id, imagePath);
+    res.json({
+      success: true,
+      message: "Deal image updated successfully",
+      data: image
+    });
+  },
+
+  deleteDealImage: async (req, res) => {
+    const existingImage = await Deal.findImageById(req.params.id);
+    if (!existingImage) {
+      throw new HttpError(404, "Deal image not found");
+    }
+
+    if (req.user.role === "vendor") {
+      await Store.assertVendorOwnership(existingImage.store_id, req.user.id);
+    }
+
+    const image = await Deal.deleteImage(req.params.id);
+    res.json({
+      success: true,
+      message: "Deal image deleted successfully",
+      data: image
+    });
   },
 
   createAd: async (req, res) => {

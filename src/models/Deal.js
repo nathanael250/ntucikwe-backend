@@ -346,6 +346,44 @@ class Deal {
     return rows[0] || null;
   }
 
+  static async findImageById(imageId) {
+    const rows = await query(
+      `SELECT di.*, d.store_id
+       FROM deal_images di
+       INNER JOIN deals d ON d.id = di.deal_id
+       WHERE di.id = ?
+       LIMIT 1`,
+      [imageId],
+    );
+
+    return rows[0] || null;
+  }
+
+  static async updateImage(imageId, imagePath) {
+    const existingImage = await this.findImageById(imageId);
+    if (!existingImage) {
+      throw new HttpError(404, "Deal image not found");
+    }
+
+    await query("UPDATE deal_images SET image_path = ? WHERE id = ?", [
+      imagePath,
+      imageId,
+    ]);
+
+    const rows = await query("SELECT * FROM deal_images WHERE id = ? LIMIT 1", [imageId]);
+    return rows[0] || null;
+  }
+
+  static async deleteImage(imageId) {
+    const existingImage = await this.findImageById(imageId);
+    if (!existingImage) {
+      throw new HttpError(404, "Deal image not found");
+    }
+
+    await query("DELETE FROM deal_images WHERE id = ?", [imageId]);
+    return existingImage;
+  }
+
   static async update(id, payload) {
     const existingDeal = await this.findById(id);
     if (!existingDeal) {
@@ -453,6 +491,16 @@ class Deal {
     } finally {
       connection.release();
     }
+  }
+
+  static async delete(id) {
+    const existingDeal = await this.findById(id);
+    if (!existingDeal) {
+      throw new HttpError(404, "Deal not found");
+    }
+
+    await query("DELETE FROM deals WHERE id = ?", [id]);
+    return existingDeal;
   }
 }
 

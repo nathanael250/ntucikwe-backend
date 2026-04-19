@@ -30,11 +30,23 @@ const commandMap = {
     permission: commands.LIST_USERS,
     handler: masterController.listUsers
   },
+  [commands.UPDATE_USER]: {
+    authRequired: true,
+    permission: commands.UPDATE_USER,
+    idSource: "id",
+    handler: masterController.updateUser
+  },
   [commands.UPDATE_USER_STATUS]: {
     authRequired: true,
     permission: commands.UPDATE_USER_STATUS,
     idSource: "id",
     handler: masterController.updateUserStatus
+  },
+  [commands.DELETE_USER]: {
+    authRequired: true,
+    permission: commands.DELETE_USER,
+    idSource: "id",
+    handler: masterController.deleteUser
   },
   [commands.CREATE_STORE_CATEGORY]: {
     authRequired: true,
@@ -62,6 +74,12 @@ const commandMap = {
     permission: commands.UPDATE_STORE,
     idSource: "id",
     handler: masterController.updateStore
+  },
+  [commands.DELETE_STORE]: {
+    authRequired: true,
+    permission: commands.DELETE_STORE,
+    idSource: "id",
+    handler: masterController.deleteStore
   },
   [commands.LIST_STORES]: {
     handler: masterController.listStores
@@ -111,6 +129,12 @@ const commandMap = {
     idSource: "id",
     handler: masterController.updateDeal
   },
+  [commands.DELETE_DEAL]: {
+    authRequired: true,
+    permission: commands.DELETE_DEAL,
+    idSource: "id",
+    handler: masterController.deleteDeal
+  },
   [commands.LIST_DEALS]: {
     handler: masterController.listDeals
   },
@@ -123,6 +147,18 @@ const commandMap = {
     permission: commands.ADD_DEAL_IMAGE,
     idSource: "id",
     handler: masterController.addDealImage
+  },
+  [commands.UPDATE_DEAL_IMAGE]: {
+    authRequired: true,
+    permission: commands.UPDATE_DEAL_IMAGE,
+    idSource: "image_id",
+    handler: masterController.updateDealImage
+  },
+  [commands.DELETE_DEAL_IMAGE]: {
+    authRequired: true,
+    permission: commands.DELETE_DEAL_IMAGE,
+    idSource: "image_id",
+    handler: masterController.deleteDealImage
   },
   [commands.CREATE_AD]: {
     authRequired: true,
@@ -194,6 +230,11 @@ const uploadMap = {
     { name: "images[]", maxCount: 10 }
   ]),
   [commands.ADD_DEAL_IMAGE]: dealsUpload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "images", maxCount: 1 },
+    { name: "images[]", maxCount: 1 }
+  ]),
+  [commands.UPDATE_DEAL_IMAGE]: dealsUpload.fields([
     { name: "image", maxCount: 1 },
     { name: "images", maxCount: 1 },
     { name: "images[]", maxCount: 1 }
