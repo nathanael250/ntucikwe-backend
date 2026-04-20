@@ -60,6 +60,7 @@ If you use Postman, create these variables:
 3. Optionally import [database/seed.sql](/Users/apple/Projects/mopas/ntucikwe-backend/database/seed.sql).
 4. Configure `.env`.
 5. Start the server with `npm run dev`.
+6. If you already have an old database, run [20260420_vendor_business_proof.sql](/Users/apple/Projects/mopas/ntucikwe-backend/database/migrations/20260420_vendor_business_proof.sql).
 
 ## Important Role Note
 
@@ -87,22 +88,23 @@ Or insert a dedicated admin user manually with a hashed password.
 1. `health`
 2. `register` vendor
 3. `login` vendor
-4. `get_profile`
-5. `update_user`
-6. `list_store_categories`
-7. `list_deal_categories`
-8. `create_store`
-9. `update_store`
-10. `list_stores`
-11. `create_deal`
-12. `update_deal`
-13. `update_deal_image`
-14. `list_deals`
-15. `get_deal`
-16. `add_deal_image`
-17. `create_ad`
-18. `list_ads`
-19. `my_notifications`
+4. `upload_vendor_business_proof`
+5. `get_profile`
+6. `update_user`
+7. `list_store_categories`
+8. `list_deal_categories`
+9. `create_store`
+10. `upload_banner`
+11. `list_stores`
+12. `create_deal`
+13. `update_deal`
+14. `update_deal_image`
+15. `list_deals`
+16. `get_deal`
+17. `add_deal_image`
+18. `create_ad`
+19. `list_ads`
+20. `my_notifications`
 
 For admin testing:
 
@@ -124,6 +126,7 @@ For admin testing:
 | `register` | No | Any | Creates `vendor` or `public_user` |
 | `login` | No | Any | Returns JWT token |
 | `get_profile` | Yes | Any logged-in user | Current user profile |
+| `upload_vendor_business_proof` | Yes | Vendor | Upload vendor business proof PDF/image after registration |
 | `list_users` | Yes | Admin | List users |
 | `update_user` | Yes | Admin or owner | Requires `id`; admin can update `role`, `status`, `email_verified` |
 | `update_user_status` | Yes | Admin | Requires `id`, `status` |
@@ -133,6 +136,7 @@ For admin testing:
 | `create_deal_category` | Yes | Admin | Create deal category |
 | `list_deal_categories` | No | Any | List deal categories |
 | `create_store` | Yes | Vendor/Admin | Vendor creates own store |
+| `upload_banner` | Yes | Vendor/Admin | Requires `id` and `banner`; uploads only the store banner |
 | `update_store` | Yes | Vendor/Admin | Partial update supported; send only changed fields |
 | `delete_store` | Yes | Vendor/Admin | Requires `id`; vendor can delete only own store |
 | `list_stores` | No | Any | Supports filters |
@@ -246,6 +250,42 @@ Body:
 {}
 ```
 
+### 4A. Upload Vendor Business Proof
+
+This is the separate dashboard upload after vendor registration. The vendor must already be logged in.
+
+Accepted file types:
+
+- PDF
+- JPG / JPEG
+- PNG
+- WEBP
+
+Headers:
+
+```http
+request: upload_vendor_business_proof
+Authorization: Bearer {{vendor_token}}
+```
+
+Fields:
+
+- `document` = select business proof file
+
+Example `curl`:
+
+```bash
+curl -X POST http://localhost:5000/api \
+  -H "request: upload_vendor_business_proof" \
+  -H "Authorization: Bearer <vendor_token>" \
+  -F "document=@/absolute/path/to/business-proof.pdf"
+```
+
+The uploaded file path will be stored on the vendor account in:
+
+- `business_proof_document`
+- `business_proof_uploaded_at`
+
 ### 4B. Update User
 
 Admins can update any user. Vendors and public users can update only themselves.
@@ -347,7 +387,33 @@ Save:
 
 - `data.id` as `store_id`
 
-### 7B. Update Store
+### 7B. Upload Store Banner
+
+Use `form-data` and send only the store `id` plus the `banner` file.
+
+Headers:
+
+```http
+request: upload_banner
+Authorization: Bearer {{vendor_token}}
+```
+
+Fields:
+
+- `id` = `{{store_id}}`
+- `banner` = select banner image file
+
+Example `curl`:
+
+```bash
+curl -X POST http://localhost:5000/api \
+  -H "request: upload_banner" \
+  -H "Authorization: Bearer <vendor_token>" \
+  -F "id=1" \
+  -F "banner=@/absolute/path/to/new-store-banner.jpg"
+```
+
+### 7C. Update Store
 
 Use `form-data` when updating the banner and profile image. You can also send only `id` plus one image field if you want to change just the banner or profile image without changing the rest of the store data.
 
@@ -391,7 +457,7 @@ curl -X POST http://localhost:5000/api \
   -F "profile_image=@/absolute/path/to/new-profile.jpg"
 ```
 
-### 7C. Delete Store
+### 7D. Delete Store
 
 Headers:
 

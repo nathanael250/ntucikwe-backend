@@ -3,7 +3,12 @@ const masterController = require("../controllers/masterController");
 const auth = require("../middleware/auth");
 const authOptional = require("../middleware/authOptional");
 const authorize = require("../middleware/authorize");
-const { dealsUpload, adsUpload, storesUpload } = require("../middleware/upload");
+const {
+  dealsUpload,
+  adsUpload,
+  storesUpload,
+  vendorDocumentsUpload
+} = require("../middleware/upload");
 const commands = require("../config/commands");
 const { asyncHandler } = require("../utils/controllerHelpers");
 const HttpError = require("../utils/httpError");
@@ -24,6 +29,11 @@ const commandMap = {
     authRequired: true,
     permission: commands.GET_PROFILE,
     handler: masterController.getProfile
+  },
+  [commands.UPLOAD_VENDOR_BUSINESS_PROOF]: {
+    authRequired: true,
+    permission: commands.UPLOAD_VENDOR_BUSINESS_PROOF,
+    handler: masterController.uploadVendorBusinessProof
   },
   [commands.LIST_USERS]: {
     authRequired: true,
@@ -68,6 +78,12 @@ const commandMap = {
     authRequired: true,
     permission: commands.CREATE_STORE,
     handler: masterController.createStore
+  },
+  [commands.UPLOAD_BANNER]: {
+    authRequired: true,
+    permission: commands.UPLOAD_BANNER,
+    idSource: "id",
+    handler: masterController.uploadBanner
   },
   [commands.UPDATE_STORE]: {
     authRequired: true,
@@ -216,10 +232,16 @@ const uploadMap = {
     { name: "profile_image", maxCount: 1 },
     { name: "profile", maxCount: 1 }
   ]),
+  [commands.UPLOAD_BANNER]: storesUpload.fields([{ name: "banner", maxCount: 1 }]),
   [commands.UPDATE_STORE]: storesUpload.fields([
     { name: "banner", maxCount: 1 },
     { name: "profile_image", maxCount: 1 },
     { name: "profile", maxCount: 1 }
+  ]),
+  [commands.UPLOAD_VENDOR_BUSINESS_PROOF]: vendorDocumentsUpload.fields([
+    { name: "document", maxCount: 1 },
+    { name: "business_proof_document", maxCount: 1 },
+    { name: "file", maxCount: 1 }
   ]),
   [commands.CREATE_DEAL]: dealsUpload.fields([
     { name: "images", maxCount: 10 },

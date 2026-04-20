@@ -2,13 +2,19 @@ const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 const HttpError = require("../utils/httpError");
-const { dealsUploadsRoot, adsUploadsRoot, storesUploadsRoot } = require("../config/paths");
+const {
+  dealsUploadsRoot,
+  adsUploadsRoot,
+  storesUploadsRoot,
+  vendorDocumentsUploadsRoot
+} = require("../config/paths");
 
 fs.mkdirSync(dealsUploadsRoot, { recursive: true });
 fs.mkdirSync(adsUploadsRoot, { recursive: true });
 fs.mkdirSync(storesUploadsRoot, { recursive: true });
+fs.mkdirSync(vendorDocumentsUploadsRoot, { recursive: true });
 
-const fileFilter = (_req, file, cb) => {
+const imageFileFilter = (_req, file, cb) => {
   if (!file.mimetype || !file.mimetype.startsWith("image/")) {
     cb(new HttpError(400, "Only image uploads are allowed"));
     return;
@@ -17,7 +23,24 @@ const fileFilter = (_req, file, cb) => {
   cb(null, true);
 };
 
-const createUploader = (destinationDir) =>
+const documentFileFilter = (_req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/jpg"
+  ];
+
+  if (!file.mimetype || !allowedMimeTypes.includes(file.mimetype)) {
+    cb(new HttpError(400, "Only PDF, JPG, PNG, or WEBP documents are allowed"));
+    return;
+  }
+
+  cb(null, true);
+};
+
+const createUploader = (destinationDir, fileFilter) =>
   multer({
     storage: multer.diskStorage({
       destination: (_req, _file, cb) => {
@@ -40,7 +63,8 @@ const createUploader = (destinationDir) =>
   });
 
 module.exports = {
-  dealsUpload: createUploader(dealsUploadsRoot),
-  adsUpload: createUploader(adsUploadsRoot),
-  storesUpload: createUploader(storesUploadsRoot)
+  dealsUpload: createUploader(dealsUploadsRoot, imageFileFilter),
+  adsUpload: createUploader(adsUploadsRoot, imageFileFilter),
+  storesUpload: createUploader(storesUploadsRoot, imageFileFilter),
+  vendorDocumentsUpload: createUploader(vendorDocumentsUploadsRoot, documentFileFilter)
 };

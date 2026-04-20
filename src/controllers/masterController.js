@@ -124,6 +124,28 @@ const masterController = {
     });
   },
 
+  uploadVendorBusinessProof: async (req, res) => {
+    if (req.user.role !== "vendor") {
+      throw new HttpError(403, "Only vendors can upload business proof documents");
+    }
+
+    const [uploadedFile] = getUploadedFiles(req);
+    if (!uploadedFile) {
+      throw new HttpError(400, "Business proof document is required");
+    }
+
+    const user = await User.uploadBusinessProof(
+      req.user.id,
+      `/uploads/vendor-documents/${uploadedFile.filename}`
+    );
+
+    res.json({
+      success: true,
+      message: "Business proof document uploaded successfully",
+      data: user
+    });
+  },
+
   listUsers: async (req, res) => {
     const pagination = parsePagination(req.query);
     const users = await User.list({
@@ -229,6 +251,32 @@ const masterController = {
     res.status(201).json({
       success: true,
       message: "Store created successfully",
+      data: store
+    });
+  },
+
+  uploadBanner: async (req, res) => {
+    const existingStore = await Store.findById(req.params.id);
+    if (!existingStore) {
+      throw new HttpError(404, "Store not found");
+    }
+
+    if (req.user.role === "vendor") {
+      await Store.assertVendorOwnership(req.params.id, req.user.id);
+    }
+
+    const bannerFile = getUploadedFileByField(req, ["banner"]);
+    if (!bannerFile) {
+      throw new HttpError(400, "Banner image is required");
+    }
+
+    const store = await Store.update(req.params.id, {
+      banner: `/uploads/stores/${bannerFile.filename}`
+    });
+
+    res.json({
+      success: true,
+      message: "Store banner uploaded successfully",
       data: store
     });
   },

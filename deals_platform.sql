@@ -212,6 +212,8 @@ CREATE TABLE `users` (
   `role` enum('admin','vendor','public_user') NOT NULL DEFAULT 'public_user',
   `email_verified` tinyint(1) NOT NULL DEFAULT '0',
   `status` enum('active','inactive','blocked') NOT NULL DEFAULT 'active',
+  `business_proof_document` varchar(255) DEFAULT NULL,
+  `business_proof_uploaded_at` datetime DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -220,8 +222,8 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `first_name`, `last_name`, `email`, `phone_number`, `address`, `password`, `role`, `email_verified`, `status`, `created_at`, `updated_at`) VALUES
-(1, 'Alice', 'Vendor', 'alice.vendor@example.com', '0780000000', 'Kigali', '$2a$10$QDrZIvDUMOfhKrCyf6JHdOecCoS7TLwgWqvuRaC7iyvM7u1wMwQPO', 'vendor', 0, 'active', '2026-03-24 11:57:44', '2026-03-24 11:57:44');
+INSERT INTO `users` (`id`, `first_name`, `last_name`, `email`, `phone_number`, `address`, `password`, `role`, `email_verified`, `status`, `business_proof_document`, `business_proof_uploaded_at`, `created_at`, `updated_at`) VALUES
+(1, 'Alice', 'Vendor', 'alice.vendor@example.com', '0780000000', 'Kigali', '$2a$10$QDrZIvDUMOfhKrCyf6JHdOecCoS7TLwgWqvuRaC7iyvM7u1wMwQPO', 'vendor', 0, 'active', NULL, NULL, '2026-03-24 11:57:44', '2026-03-24 11:57:44');
 
 --
 -- Indexes for dumped tables

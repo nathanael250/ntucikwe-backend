@@ -81,7 +81,8 @@ class User extends BaseModel {
   static async getSafeUserById(id) {
     const rows = await query(
       `SELECT id, first_name, last_name, email, phone_number, address, role,
-              email_verified, status, created_at, updated_at
+              email_verified, status, business_proof_document,
+              business_proof_uploaded_at, created_at, updated_at
        FROM users
        WHERE id = ?
        LIMIT 1`,
@@ -134,7 +135,8 @@ class User extends BaseModel {
 
     return query(
       `SELECT id, first_name, last_name, email, phone_number, address, role,
-              email_verified, status, created_at, updated_at
+              email_verified, status, business_proof_document,
+              business_proof_uploaded_at, created_at, updated_at
        FROM users
        ${whereClause}
        ORDER BY id DESC
@@ -236,6 +238,27 @@ class User extends BaseModel {
 
     await query("DELETE FROM users WHERE id = ?", [id]);
     return existingUser;
+  }
+
+  static async uploadBusinessProof(userId, documentPath) {
+    const existingUser = await this.findById(userId);
+    if (!existingUser) {
+      throw new HttpError(404, "User not found");
+    }
+
+    if (existingUser.role !== "vendor") {
+      throw new HttpError(403, "Only vendor accounts can upload business proof");
+    }
+
+    await query(
+      `UPDATE users
+       SET business_proof_document = ?,
+           business_proof_uploaded_at = NOW()
+       WHERE id = ?`,
+      [documentPath, userId]
+    );
+
+    return this.getSafeUserById(userId);
   }
 }
 

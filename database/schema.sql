@@ -12,6 +12,8 @@ CREATE TABLE users (
     role ENUM('admin', 'vendor', 'public_user') NOT NULL DEFAULT 'public_user',
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     status ENUM('active', 'inactive', 'blocked') NOT NULL DEFAULT 'active',
+    business_proof_document VARCHAR(255) NULL,
+    business_proof_uploaded_at DATETIME NULL,
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)

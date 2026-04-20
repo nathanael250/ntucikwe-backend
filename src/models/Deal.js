@@ -185,6 +185,19 @@ class Deal {
     });
   }
 
+  static resolveStatus(existingDeal, payload, nextSchedule) {
+    if (payload.status !== undefined && payload.status !== "") {
+      return payload.status;
+    }
+
+    const endDate = nextSchedule.end_date ? new Date(nextSchedule.end_date) : null;
+    if (endDate && !Number.isNaN(endDate.getTime()) && endDate <= new Date()) {
+      return "expired";
+    }
+
+    return "active";
+  }
+
   static mapDealState(deal) {
     const now = new Date();
     const endDate = deal.end_date ? new Date(deal.end_date) : null;
@@ -426,12 +439,7 @@ class Deal {
     const incomingImages = this.normalizeImagePaths(
       payload.image_paths || payload.images,
     );
-    const nextStatus =
-      payload.status ||
-      (existingDeal.status === "expired" &&
-      new Date(nextSchedule.end_date) > new Date()
-        ? "active"
-        : existingDeal.status);
+    const nextStatus = this.resolveStatus(existingDeal, payload, nextSchedule);
 
     const connection = await pool.getConnection();
 
