@@ -2,6 +2,10 @@ const { query } = require("../config/database");
 const HttpError = require("../utils/httpError");
 
 class Store {
+  static normalizeNullableValue(value) {
+    return value === undefined ? null : value;
+  }
+
   static async assertVendorOwnership(storeId, vendorId) {
     const store = await this.findById(storeId);
     if (!store) {
@@ -122,16 +126,24 @@ class Store {
        WHERE id = ?`,
       [
         payload.store_name || existingStore.store_name,
-        payload.description !== undefined ? payload.description : existingStore.description,
-        payload.banner !== undefined ? payload.banner : existingStore.banner,
+        this.normalizeNullableValue(
+          payload.description !== undefined ? payload.description : existingStore.description
+        ),
+        this.normalizeNullableValue(
+          payload.banner !== undefined ? payload.banner : existingStore.banner
+        ),
         payload.profile_image !== undefined
-          ? payload.profile_image
-          : existingStore.profile_image,
-        payload.location !== undefined ? payload.location : existingStore.location,
-        payload.address !== undefined ? payload.address : existingStore.address,
+          ? this.normalizeNullableValue(payload.profile_image)
+          : this.normalizeNullableValue(existingStore.profile_image),
+        this.normalizeNullableValue(
+          payload.location !== undefined ? payload.location : existingStore.location
+        ),
+        this.normalizeNullableValue(
+          payload.address !== undefined ? payload.address : existingStore.address
+        ),
         payload.store_category_id !== undefined
-          ? payload.store_category_id
-          : existingStore.store_category_id,
+          ? this.normalizeNullableValue(payload.store_category_id)
+          : this.normalizeNullableValue(existingStore.store_category_id),
         id
       ]
     );
