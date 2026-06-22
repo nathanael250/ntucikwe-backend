@@ -286,7 +286,8 @@ class RedemptionRequest {
     );
 
     const redemptions = await query(
-      `SELECT rr.id, rr.order_id, rr.store_id, s.store_name, rr.status, rr.total_items,
+      `SELECT rr.id, rr.order_id, rr.store_id, s.store_name, rr.qr_token,
+              rr.status, rr.total_items,
               rr.total_original_amount, rr.total_discount_amount, rr.total_savings,
               rr.expires_at, rr.used_at, rr.created_at
        FROM redemption_requests rr
