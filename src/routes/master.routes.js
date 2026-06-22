@@ -114,6 +114,11 @@ const commandMap = {
     optionalAuth: true,
     handler: masterController.createRedemptionQr
   },
+  [commands.MY_ORDERS]: {
+    authRequired: true,
+    permission: commands.MY_ORDERS,
+    handler: masterController.myOrders
+  },
   [commands.GET_ORDER_DETAILS]: {
     authRequired: true,
     permission: commands.GET_ORDER_DETAILS,

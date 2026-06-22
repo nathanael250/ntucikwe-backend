@@ -144,6 +144,7 @@ For admin testing:
 | `get_store` | No | Any | Requires `id` |
 | `list_store_deals` | No | Any | Requires `store_id` |
 | `create_redemption_qr` | Optional | Guest or logged-in user | Frontend sends selected items and gets one QR per store |
+| `my_orders` | Yes | Logged-in user | Fetch the logged-in customer's own order history |
 | `get_order_details` | Yes | Logged-in user / seller / admin | Fetch an order by `order_id` or `order_code` |
 | `list_used_redemption_qrs` | Yes | Admin/Vendor | Fetch already used seller QR codes with sold items |
 | `verify_redemption_qr` | Yes | Admin/Vendor | Seller checks QR status before accepting it |
@@ -808,9 +809,30 @@ WAWP_INSTANCE_ID=
 WAWP_ACCESS_TOKEN=
 ```
 
-### 10D. Verify QR Before Use
+### 10D. List My Orders
 
-### 10D. Get Order Details Later
+Headers:
+
+```http
+request: my_orders
+Content-Type: application/json
+Authorization: Bearer {{user_token}}
+```
+
+Optional body:
+
+```json
+{
+  "page": 1,
+  "limit": 10,
+  "status": "pending",
+  "search": "ORD-"
+}
+```
+
+Response includes only orders linked to the logged-in user, with order totals, items, and store redemption summaries.
+
+### 10E. Get Order Details Later
 
 Headers:
 
@@ -840,9 +862,7 @@ Customers see the full order.
 
 Vendors only see the parts of the order that belong to their own store.
 
-### 10E. Verify QR Before Use
-
-### 10E. List Used QR Codes
+### 10F. List Used QR Codes
 
 Headers:
 

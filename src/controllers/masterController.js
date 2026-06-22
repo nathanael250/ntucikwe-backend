@@ -461,6 +461,22 @@ const masterController = {
     });
   },
 
+  myOrders: async (req, res) => {
+    const pagination = parsePagination(req.query);
+    const orders = await RedemptionRequest.listOrdersForUser({
+      user_id: req.user.id,
+      ...pagination,
+      status: req.query.status,
+      search: req.query.search
+    });
+
+    res.json({
+      success: true,
+      data: orders,
+      meta: pagination
+    });
+  },
+
   getOrderDetails: async (req, res) => {
     const order = await RedemptionRequest.findOrderForActor({
       order_id: req.body.order_id,

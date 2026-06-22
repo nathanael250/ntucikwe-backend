@@ -222,6 +222,100 @@ class RedemptionRequest {
     return this.hydrateOrderById(rows[0].id);
   }
 
+  static async listOrdersForUser({ user_id, limit, offset, status, search }) {
+    const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 100);
+    const safeOffset = Math.max(Number(offset) || 0, 0);
+    const conditions = ["o.user_id = ?"];
+    const params = [user_id];
+    const userOrderRows = await query("SELECT id FROM orders WHERE user_id = ?", [
+      user_id
+    ]);
+
+    for (const order of userOrderRows) {
+      await this.syncExpiredStatusesByOrder(order.id);
+      await this.syncOrderStatus(order.id);
+    }
+
+    if (status) {
+      conditions.push("o.status = ?");
+      params.push(status);
+    }
+
+    if (search) {
+      conditions.push(
+        `(o.order_code LIKE ?
+          OR o.summary_message LIKE ?)`
+      );
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    const rows = await query(
+      `SELECT o.id
+       FROM orders o
+       WHERE ${conditions.join(" AND ")}
+       ORDER BY o.created_at DESC, o.id DESC
+       LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+      params
+    );
+    const orderIds = rows.map((row) => Number(row.id));
+
+    if (orderIds.length === 0) {
+      return [];
+    }
+
+    const placeholders = orderIds.map(() => "?").join(", ");
+    const orders = await query(
+      `SELECT o.*,
+              COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), o.customer_name) AS customer_name,
+              COALESCE(u.email, o.email) AS customer_email,
+              COALESCE(u.phone_number, o.phone_number) AS customer_phone_number
+       FROM orders o
+       LEFT JOIN users u ON u.id = o.user_id
+       WHERE o.id IN (${placeholders})
+       ORDER BY o.created_at DESC, o.id DESC`,
+      orderIds
+    );
+
+    const items = await query(
+      `SELECT oi.*, s.store_name
+       FROM order_items oi
+       INNER JOIN stores s ON s.id = oi.store_id
+       WHERE oi.order_id IN (${placeholders})
+       ORDER BY oi.id ASC`,
+      orderIds
+    );
+
+    const redemptions = await query(
+      `SELECT rr.id, rr.order_id, rr.store_id, s.store_name, rr.status, rr.total_items,
+              rr.total_original_amount, rr.total_discount_amount, rr.total_savings,
+              rr.expires_at, rr.used_at, rr.created_at
+       FROM redemption_requests rr
+       INNER JOIN stores s ON s.id = rr.store_id
+       WHERE rr.order_id IN (${placeholders})
+       ORDER BY rr.id ASC`,
+      orderIds
+    );
+
+    const itemsByOrderId = items.reduce((accumulator, item) => {
+      const key = Number(item.order_id);
+      accumulator[key] = accumulator[key] || [];
+      accumulator[key].push(item);
+      return accumulator;
+    }, {});
+    const redemptionsByOrderId = redemptions.reduce((accumulator, redemption) => {
+      const key = Number(redemption.order_id);
+      accumulator[key] = accumulator[key] || [];
+      accumulator[key].push(this.mapRedemptionState(redemption));
+      return accumulator;
+    }, {});
+
+    return orders.map((order) => ({
+      ...order,
+      items: itemsByOrderId[Number(order.id)] || [],
+      store_redemptions: redemptionsByOrderId[Number(order.id)] || []
+    }));
+  }
+
   static async filterOrderForVendor(order, vendorId) {
     const rows = await query(
       `SELECT DISTINCT rr.store_id
